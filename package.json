@@ -1,0 +1,13 @@
+{
+  "name": "clube-do-livro-du-diable",
+  "version": "0.5.1",
+  "private": true,
+  "description": "Clube do Livro Du Diable — site e primeiro jogo multiplayer de Dom Quixote.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}
