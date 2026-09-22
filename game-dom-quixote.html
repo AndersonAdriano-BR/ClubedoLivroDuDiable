@@ -26,24 +26,14 @@ button,input{font:inherit}button{cursor:pointer}.hidden{display:none!important}
 .game-main{flex:1;min-height:calc(100vh - 70px)}
 
 /* Lobby */
-.lobby-view,.roulette-view,.finished-view{min-height:calc(100vh - 70px);display:grid;place-items:center;padding:24px 16px;background:var(--bg)}
-.lobby-card,.roulette-card,.finished-card{width:min(820px,100%);background:#11161b;border:1px solid var(--line);box-shadow:var(--shadow);padding:34px;text-align:center}
-.lobby-card h1,.roulette-card h1,.finished-card h1{margin:6px 0 15px;font:700 clamp(30px,5vw,50px)/1.02 Georgia,serif;color:#f3f5f8}
-.lobby-kicker,.roulette-kicker,.panel-kicker{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:900}
+.lobby-view,.finished-view{min-height:calc(100vh - 70px);display:grid;place-items:center;padding:24px 16px;background:var(--bg)}
+.lobby-card,.finished-card{width:min(820px,100%);background:#11161b;border:1px solid var(--line);box-shadow:var(--shadow);padding:34px;text-align:center}
+.lobby-card h1,.finished-card h1{margin:6px 0 15px;font:700 clamp(30px,5vw,50px)/1.02 Georgia,serif;color:#f3f5f8}
+.lobby-kicker,.panel-kicker{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:900}
 .lobby-copy{max-width:580px;margin:0 auto 22px;color:#a9b2bc;line-height:1.6}.lobby-ornament{color:var(--accent);font-size:20px}
-.lobby-players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;text-align:left;margin:22px 0 24px}.player-chip{padding:10px 12px;background:#161c22;border:1px solid #29323b;display:flex;align-items:center;gap:10px;color:#e7ebef}.player-dot{width:10px;height:10px;border-radius:50%;flex:none}
+.lobby-players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;text-align:left;margin:22px 0 24px}.player-chip{padding:10px 12px;background:#161c22;border:1px solid #29323b;display:flex;align-items:center;gap:10px;color:#e7ebef}.join-number{width:20px;color:#727e8b;font:800 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;text-align:right}.player-dot{width:10px;height:10px;border-radius:50%;flex:none}
 .start-button,.draw-button{border:1px solid #956c22;background:#f2cf69;color:#141516;padding:12px 24px;min-width:140px;text-transform:uppercase;letter-spacing:.16em;font-size:11px;font-weight:900;box-shadow:0 8px 18px rgba(0,0,0,.22)}
-.start-button:hover,.draw-button:hover{filter:brightness(1.06)}.start-button:disabled,.draw-button:disabled{opacity:.42;cursor:not-allowed}.start-hint,.sort-hint{font-size:11px;color:#7e8994;margin:11px 0 0}
-
-/* Roulette */
-.roulette-card{max-width:940px}.roulette-stage{display:grid;place-items:center;padding:20px 0 8px}.roulette-wheel{width:min(470px,84vw);aspect-ratio:1;border-radius:50%;position:relative;background:radial-gradient(circle at center,#0d1318 0 28%,#11191f 29% 72%,#0a0f13 73% 100%);border:10px solid #2d3741;box-shadow:0 18px 50px rgba(0,0,0,.35),inset 0 0 0 2px #6a5b31;transform:rotate(0deg);overflow:visible}
-.roulette-wheel::before{content:"";position:absolute;inset:12%;border-radius:50%;border:1px dashed #53606c;opacity:.7}.roulette-wheel.is-spinning{transition:transform 7.2s cubic-bezier(.10,.68,.18,1)}
-.roulette-pointer{position:absolute;top:-24px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:16px solid transparent;border-right:16px solid transparent;border-bottom:28px solid #ff6688;z-index:8;filter:drop-shadow(0 2px 3px rgba(0,0,0,.3))}
-.roulette-center{position:absolute;inset:50%;width:118px;height:118px;margin:-59px;border-radius:50%;display:grid;place-items:center;background:#050607;border:4px solid var(--accent);box-shadow:0 8px 24px rgba(0,0,0,.28);z-index:7}
-.roulette-center button{min-width:92px;padding:11px 10px}
-.roulette-labels{position:absolute;inset:0;z-index:5}.wheel-label{position:absolute;left:50%;top:50%;width:104px;min-height:30px;padding:7px 8px;border:1px solid #55616e;background:#1a2229;color:#f2f5f8;text-align:center;font-size:10px;line-height:1.05;font-weight:900;box-shadow:0 4px 10px rgba(0,0,0,.22);transform-origin:center;transition:transform .2s,background .2s,border-color .2s,box-shadow .2s, color .2s}.wheel-label.winner{background:#f2cf69;color:#111;border-color:#fff3bd;box-shadow:0 0 0 3px #ff6688,0 0 30px rgba(242,207,105,.55);animation:winnerPulse .65s ease-in-out infinite alternate}@keyframes winnerPulse{to{transform:scale(1.08)}}
-.roulette-result{min-height:25px;margin:12px 0 10px;font:900 20px/1 Georgia,serif;color:#fff}.roulette-result strong{color:var(--accent)}
-.roulette-order{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin:0 auto 15px;padding:11px 14px;border:1px solid #5b4b25;background:#17140b;color:#f3d67c;font-size:12px;font-weight:800}.roulette-order .arrow{font-size:20px;color:#ff6688}
+.start-button:hover,.draw-button:hover{filter:brightness(1.06)}.start-button:disabled,.draw-button:disabled{opacity:.42;cursor:not-allowed}.start-hint{font-size:11px;color:#7e8994;margin:11px 0 0}
 
 
 .theme-picker{margin:10px 0 9px;padding:10px;background:#11161b;border:1px solid #2b343e;display:flex;flex-wrap:wrap;gap:7px;align-items:center}.theme-picker > #themeButtons{display:flex;flex-wrap:wrap;gap:7px}.theme-picker-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8f9aa5;font-weight:900;margin-right:2px}.theme-choice{border:1px solid #394451;background:#161c22;color:#dfe5ea;padding:7px 10px;font-size:10px;font-weight:800}.theme-choice:hover{border-color:#f2cf69;color:#f2cf69}.theme-choice:disabled{opacity:.5;cursor:wait}.theme-wait{margin:10px 0 9px;padding:10px;background:#10151a;border:1px solid #2b343e;color:#87929e;font-size:11px}
@@ -96,7 +86,7 @@ button,input{font:inherit}button{cursor:pointer}.hidden{display:none!important}
   .paint-brand strong{font-size:22px}
   .paint-icon{width:23px;height:23px}
   .player-counter{font-size:11px}
-  .lobby-card,.roulette-card,.finished-card{padding:24px 14px}
+  .lobby-card,.finished-card{padding:24px 14px}
   .lobby-players{grid-template-columns:1fr}
   .canvas-topline h1{font-size:13px}
   .word-strip{font-size:11px}
@@ -149,27 +139,10 @@ button,input{font:inherit}button{cursor:pointer}.hidden{display:none!important}
         <div class="lobby-ornament">✦</div>
         <p class="lobby-kicker">SALA DE PINTURA</p>
         <h1>Entrem na sala.</h1>
-        <p class="lobby-copy">Quando qualquer leitor pressionar <b>Start</b>, a sala é fechada e começa o sorteio da primeira vez.</p>
+        <p class="lobby-copy">A ordem de entrada define a ordem das vezes de pintar. O primeiro leitor controla o Start.</p>
         <div class="lobby-players" id="lobbyPlayers"></div>
         <button class="start-button" id="startButton" type="button">Start</button>
         <p class="start-hint" id="startHint">Conectando à sala...</p>
-      </div>
-    </section>
-
-    <section class="roulette-view hidden" id="rouletteView">
-      <div class="roulette-card">
-        <p class="roulette-kicker">ORDEM DOS LEITORES</p>
-        <h1>Escolher quem começa.</h1>
-        <div class="roulette-stage">
-          <div class="roulette-wheel" id="rouletteWheel">
-            <div class="roulette-pointer"></div>
-            <div class="roulette-labels" id="rouletteLabels"></div>
-            <div class="roulette-center"><button class="draw-button" id="sortearButton" type="button">Sortear</button></div>
-          </div>
-        </div>
-        <div class="roulette-result" id="rouletteResult">Clique em Sortear para começar.</div>
-        <div class="roulette-order hidden" id="rouletteOrder"><span class="arrow">➜</span><span id="rouletteOrderText"></span></div>
-        <p class="sort-hint">Os leitores ficam em ordem alfabética. O sorteado abre a sequência; depois a vez segue no sentido horário.</p>
       </div>
     </section>
 

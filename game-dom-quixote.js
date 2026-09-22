@@ -13,13 +13,12 @@ const ROOM_NAME = 'dom-quixote';
 const CHANNEL_NAME = `du-diable:${ROOM_NAME}`;
 const MAX_PLAYERS = 10;
 const TOTAL_ROUNDS = 5;
-const ROULETTE_SPIN_MS = 7200;
-const ROULETTE_REVEAL_MS = 5000;
+const ROUND_END_REVEAL_MS = 7000;
 const DRAW_FLUSH_MS = 24;
-const SAVE_KEY = 'duDiableDomQuixoteMatchV5';
+const SAVE_KEY = 'duDiableDomQuixoteMatchV6';
 const CHAT_COLLAPSED_KEY = 'duDiableChatCollapsedV3';
-const PLAYER_ID_KEY = 'duDiablePlayerId';
-const PLAYER_JOIN_KEY = 'duDiablePlayerJoinedAt';
+const PLAYER_ID_KEY = 'duDiablePlayerIdSession';
+const PLAYER_JOIN_KEY = 'duDiablePlayerJoinedAtSession';
 const PLAYER_NAME_KEY = 'clubReaderName';
 
 const PLAYER_COLORS = [
@@ -53,10 +52,15 @@ const playerName = storedName.trim().slice(0, 40);
 localStorage.setItem(PLAYER_NAME_KEY, playerName);
 sessionStorage.setItem(PLAYER_NAME_KEY, playerName);
 
-const playerId = localStorage.getItem(PLAYER_ID_KEY) || crypto.randomUUID();
-localStorage.setItem(PLAYER_ID_KEY, playerId);
-const joinedAt = Number(localStorage.getItem(PLAYER_JOIN_KEY)) || Date.now();
-localStorage.setItem(PLAYER_JOIN_KEY, String(joinedAt));
+// O ID da sessão é o próprio nome do leitor e vive somente enquanto a aba estiver aberta.
+// Isso torna a ordem de entrada legível e temporária, como solicitado.
+const playerId = sessionStorage.getItem(PLAYER_ID_KEY) || playerName;
+sessionStorage.setItem(PLAYER_ID_KEY, playerId);
+const joinedAt = Number(sessionStorage.getItem(PLAYER_JOIN_KEY)) || Date.now();
+sessionStorage.setItem(PLAYER_JOIN_KEY, String(joinedAt));
+const JOIN_TOKEN_KEY = 'duDiableJoinTokenSession';
+const joinToken = sessionStorage.getItem(JOIN_TOKEN_KEY) || crypto.randomUUID();
+sessionStorage.setItem(JOIN_TOKEN_KEY, joinToken);
 
 function colorFromId(id) {
   let hash = 0;
@@ -72,13 +76,6 @@ const els = {
   lobbyPlayers: document.getElementById('lobbyPlayers'),
   startButton: document.getElementById('startButton'),
   startHint: document.getElementById('startHint'),
-  rouletteView: document.getElementById('rouletteView'),
-  rouletteWheel: document.getElementById('rouletteWheel'),
-  rouletteLabels: document.getElementById('rouletteLabels'),
-  rouletteResult: document.getElementById('rouletteResult'),
-  rouletteOrder: document.getElementById('rouletteOrder'),
-  rouletteOrderText: document.getElementById('rouletteOrderText'),
-  sortearButton: document.getElementById('sortearButton'),
   gameView: document.getElementById('gameView'),
   chatShell: document.getElementById('chatShell'),
   chatToggle: document.getElementById('chatToggle'),
@@ -118,6 +115,7 @@ let state = {
   phase: 'lobby',
   round: 0,
   theme: null,
+  joinOrder: [],
   turnOrder: [],
   turnPosition: -1,
   currentDrawerId: null,
@@ -127,9 +125,10 @@ let state = {
   chatHistory: [],
   hostId: null,
   started: false,
-  rouletteSpun: false,
-  rouletteWinnerId: null,
-  rouletteRevealUntil: 0
+  roundEndUntil: 0,
+  lastWinnerId: null,
+  lastWinnerName: null,
+  lastWinnerWord: null
 };
 
 let channel = null;
@@ -143,12 +142,11 @@ let currentTool = 'pencil';
 let pendingSegments = [];
 let flushDrawTimer = null;
 let drawSendChain = Promise.resolve();
-let wheelRotation = 0;
 let handledGuessKey = null;
 let restoredFromDisk = false;
-let rouletteTimer = null;
+let roundEndTimer = null;
 let startHandling = false;
-let rouletteHandling = false;
+let themeHandling = false;
 let resizeObserver = null;
 const seenStrokeIds = new Set();
 
@@ -180,6 +178,17 @@ function sortedPlayers(players = state.players) {
   return [...players].sort((a,b) => a.name.localeCompare(b.name,'pt-BR',{sensitivity:'base'}) || a.id.localeCompare(b.id));
 }
 
+function orderedPlayers(players = state.players, order = state.joinOrder) {
+  const map = new Map(players.map(p => [p.id, p]));
+  const ordered = [];
+  (Array.isArray(order) ? order : []).forEach(id => { if (map.has(id)) ordered.push(map.get(id)); map.delete(id); });
+  // Fallback only when a legacy/local snapshot does not have an order yet.
+  if (!Array.isArray(order) || order.length === 0) {
+    return [...map.values()].sort((a,b) => Number(a.joinedAt)-Number(b.joinedAt) || a.id.localeCompare(b.id));
+  }
+  return ordered.concat([...map.values()].sort((a,b) => Number(a.joinedAt)-Number(b.joinedAt) || a.id.localeCompare(b.id)));
+}
+
 function presencePlayers() {
   const presence = channel?.presenceState?.() || {};
   const map = new Map();
@@ -197,7 +206,11 @@ function authoritativeRoster() {
     const existing = map.get(p.id);
     map.set(p.id, existing ? {...p, score: existing.score} : p);
   });
-  return [...map.values()].sort((a,b) => a.joinedAt - b.joinedAt || a.id.localeCompare(b.id)).slice(0, MAX_PLAYERS);
+  const currentOrder = Array.isArray(state.joinOrder) ? state.joinOrder : [];
+  const ordered = [];
+  currentOrder.forEach(id => { if (map.has(id)) { ordered.push(map.get(id)); map.delete(id); } });
+  [...map.values()].sort((a,b) => a.joinedAt - b.joinedAt || a.id.localeCompare(b.id)).forEach(p => ordered.push(p));
+  return ordered.slice(0, MAX_PLAYERS);
 }
 
 function authoritativeHostId() {
@@ -225,6 +238,7 @@ function restoreLocalSave() {
       ...raw.state,
       secretWord: raw.state.secretWord || null,
       players: Array.isArray(raw.state.players) ? raw.state.players.map(cleanPlayer) : [],
+      joinOrder: Array.isArray(raw.state.joinOrder) ? raw.state.joinOrder.slice() : [],
       turnOrder: Array.isArray(raw.state.turnOrder) ? raw.state.turnOrder.slice() : [],
       strokes: Array.isArray(raw.state.strokes) ? raw.state.strokes.slice(-5000) : [],
       chatHistory: Array.isArray(raw.state.chatHistory) ? raw.state.chatHistory.slice(-200) : []
@@ -246,15 +260,17 @@ function publicState() {
     phase: state.phase,
     round: state.round,
     theme: state.theme,
+    joinOrder: state.joinOrder.slice(),
     turnOrder: state.turnOrder.slice(),
     turnPosition: state.turnPosition,
     currentDrawerId: state.currentDrawerId,
     turnKey: state.turnKey,
     hostId: authoritativeHostId(),
     started: state.started,
-    rouletteSpun: state.rouletteSpun,
-    rouletteWinnerId: state.rouletteWinnerId,
-    rouletteRevealUntil: state.rouletteRevealUntil,
+    roundEndUntil: state.roundEndUntil,
+    lastWinnerId: state.lastWinnerId,
+    lastWinnerName: state.lastWinnerName,
+    lastWinnerWord: state.lastWinnerWord,
     chatHistory: state.chatHistory.slice(-200)
   };
 }
@@ -281,7 +297,6 @@ function setStatus(text) { els.statusBanner.textContent = text; }
 
 function showOnly(view) {
   els.lobbyView.classList.toggle('hidden',view!=='lobby');
-  els.rouletteView.classList.toggle('hidden',view!=='roulette');
   els.gameView.classList.toggle('hidden',view!=='game');
   els.finishedView.classList.toggle('hidden',view!=='finished');
 }
@@ -289,8 +304,8 @@ function showOnly(view) {
 function renderPlayerCount() { els.playerCounter.textContent = `${state.players.length} de ${MAX_PLAYERS}`; }
 
 function renderLobbyPlayers() {
-  const list = sortedPlayers();
-  els.lobbyPlayers.innerHTML = list.length ? list.map(p => `<div class="player-chip"><span class="player-dot" style="background:${p.color}"></span><span>${escapeHtml(p.name)}</span>${p.id===authoritativeHostId()?'<span style="margin-left:auto;font-size:8px;color:#f2cf69;text-transform:uppercase;letter-spacing:.1em">host</span>':''}</div>`).join('') : '<div class="player-chip">Aguardando leitores...</div>';
+  const list = orderedPlayers();
+  els.lobbyPlayers.innerHTML = list.length ? list.map((p,index) => `<div class="player-chip"><span class="join-number">${String(index+1).padStart(2,'0')}</span><span class="player-dot" style="background:${p.color}"></span><span>${escapeHtml(p.name)}</span>${p.id===authoritativeHostId()?'<span style="margin-left:auto;font-size:8px;color:#f2cf69;text-transform:uppercase;letter-spacing:.1em">primeiro</span>':''}</div>`).join('') : '<div class="player-chip">Aguardando leitores...</div>';
 }
 
 function renderScores() {
@@ -329,77 +344,20 @@ function restoreChatCollapsed() {
   try { setChatCollapsed(localStorage.getItem(CHAT_COLLAPSED_KEY)==='1'); } catch (_) { setChatCollapsed(false); }
 }
 
-function buildRouletteLabels(players) {
-  els.rouletteLabels.innerHTML = '';
-  const clean = players.filter(Boolean);
-  const count = clean.length;
-  if (!count) return;
-  const radius = Math.min(168, Math.max(118, 118 + count * 5));
-  const segment = 360/count;
-  clean.forEach((player,index) => {
-    const angle = index*segment - 90;
-    const label = document.createElement('div');
-    label.className = 'wheel-label';
-    label.dataset.playerId = player.id;
-    label.textContent = player.name;
-    label.style.transform = `translate(-50%,-50%) rotate(${angle}deg) translateY(-${radius}px) rotate(${-angle}deg)`;
-    label.style.borderColor = player.color;
-    els.rouletteLabels.appendChild(label);
-  });
-}
-
-function clearWinnerHighlight() { els.rouletteLabels.querySelectorAll('.wheel-label').forEach(el=>el.classList.remove('winner')); }
-function highlightWinner(id) {
-  clearWinnerHighlight();
-  const el = els.rouletteLabels.querySelector(`[data-player-id="${CSS.escape(id)}"]`);
-  if (el) el.classList.add('winner');
-}
-
-function runRouletteSpin(firstIndex) {
-  clearWinnerHighlight();
-  const players = sortedPlayers();
-  const count = players.length || 1;
-  const segment = 360 / count;
-  const target = -(firstIndex * segment);
-  const turns = 10 + Math.floor(Math.random()*3);
-  wheelRotation = turns*360 + target;
-  els.rouletteWheel.classList.remove('is-spinning');
-  els.rouletteWheel.style.transform = 'rotate(0deg)';
-  void els.rouletteWheel.offsetWidth;
-  els.rouletteWheel.classList.add('is-spinning');
-  els.rouletteWheel.style.transform = `rotate(${wheelRotation}deg)`;
-  els.sortearButton.disabled = true;
-  const onEnd = () => {
-    els.rouletteWheel.removeEventListener('transitionend',onEnd);
-    highlightWinner(state.rouletteWinnerId);
-    showRouletteResult();
-  };
-  els.rouletteWheel.addEventListener('transitionend',onEnd,{once:true});
-}
-
-function showRouletteResult() {
-  const winner = state.players.find(p=>p.id===state.rouletteWinnerId);
-  const orderNames = state.turnOrder.map(id=>state.players.find(p=>p.id===id)?.name).filter(Boolean);
-  els.rouletteResult.innerHTML = winner ? `<strong>${escapeHtml(winner.name)}</strong> começa a sequência.` : 'Sorteio concluído.';
-  els.rouletteOrderText.textContent = orderNames.join('  →  ');
-  els.rouletteOrder.classList.remove('hidden');
-  if (winner) highlightWinner(winner.id);
-}
-
-function scheduleRouletteEnd() {
-  if (rouletteTimer) { clearTimeout(rouletteTimer); rouletteTimer=null; }
-  if (!isHost() || state.phase!=='roulette' || !state.rouletteSpun) return;
-  const remaining = Math.max(0, Number(state.rouletteRevealUntil || 0) - Date.now());
-  rouletteTimer = window.setTimeout(async () => {
-    rouletteTimer=null;
-    if (isHost() && state.phase==='roulette' && state.rouletteSpun) await hostBeginTheme();
-  }, remaining);
-}
-
 function mergePresenceIntoLobby() {
-  const list = sortedPlayers(presencePlayers().slice(0,MAX_PLAYERS));
-  const old = new Map(state.players.map(p=>[p.id,p]));
-  state.players = list.map(p=>({...p,score:old.get(p.id)?.score || 0}));
+  const present = presencePlayers();
+  const presentIds = new Set(present.map(p=>p.id));
+  const byId = new Map(state.players.map(p=>[p.id,p]));
+  const nextOrder = state.joinOrder.filter(id => presentIds.has(id));
+
+  present.forEach(p => {
+    if (!nextOrder.includes(p.id)) nextOrder.push(p.id);
+    const old = byId.get(p.id);
+    byId.set(p.id, old ? {...p, score:old.score} : p);
+  });
+
+  state.joinOrder = nextOrder.slice(0,MAX_PLAYERS);
+  state.players = state.joinOrder.map(id => byId.get(id)).filter(Boolean);
   state.hostId = authoritativeHostId();
   renderState();
   localSave();
@@ -409,11 +367,30 @@ function removeLeftPlayer(id) {
   if (!id) return;
   const wasDrawer = state.currentDrawerId === id;
   state.players = state.players.filter(p=>p.id!==id);
+  state.joinOrder = state.joinOrder.filter(x=>x!==id);
   state.turnOrder = state.turnOrder.filter(x=>x!==id);
   state.hostId = authoritativeHostId();
   renderState();
-  if (wasDrawer && isHost() && state.phase==='playing') hostAdvanceTurn();
-  else if (isHost()) publishState(true);
+  if (isHost() && wasDrawer && state.started) {
+    if (state.phase==='theme' || state.phase==='playing') hostAdvanceTurn();
+    else if (state.phase==='roundEnd') scheduleRoundEnd();
+  } else if (isHost()) publishState(true);
+}
+
+function showRoundEndState() {
+  const name = state.lastWinnerName || state.players.find(p=>p.id===state.lastWinnerId)?.name || 'Leitor';
+  const word = state.lastWinnerWord || '';
+  showSuccess(name, word);
+}
+
+function scheduleRoundEnd() {
+  if (roundEndTimer) { clearTimeout(roundEndTimer); roundEndTimer=null; }
+  if (!isHost() || state.phase!=='roundEnd') return;
+  const remaining = Math.max(0, Number(state.roundEndUntil || 0) - Date.now());
+  roundEndTimer = window.setTimeout(async()=>{
+    roundEndTimer=null;
+    if (isHost() && state.phase==='roundEnd') await hostAdvanceTurn();
+  }, remaining);
 }
 
 function renderState() {
@@ -426,37 +403,22 @@ function renderState() {
   if (state.phase === 'lobby' || !state.started) {
     showOnly('lobby');
     els.roundStatus.textContent='Lobby';
-    els.startButton.disabled=!state.players.length || state.players.length>MAX_PLAYERS;
-    els.startHint.textContent=`${state.players.length}/${MAX_PLAYERS} leitores. Qualquer leitor pode pressionar Start.`;
+    const canStart = isHost() && state.players.length>0 && state.players.length<=MAX_PLAYERS;
+    els.startButton.disabled=!canStart;
+    const host = state.players.find(p=>p.id===authoritativeHostId());
+    els.startHint.textContent = state.players.length ? `Primeiro leitor: ${host ? host.name : '—'}. ${canStart ? 'Você pode iniciar.' : 'Aguardando o primeiro leitor.'}` : 'Aguardando leitores...';
     return;
   }
 
-  if (state.phase === 'roulette') {
-    showOnly('roulette');
-    els.roundStatus.textContent='Sorteio';
-    buildRouletteLabels(sortedPlayers());
-    els.sortearButton.disabled=Boolean(state.rouletteSpun);
-    if (state.rouletteSpun) showRouletteResult();
-    else { clearWinnerHighlight(); els.rouletteResult.textContent='Clique em Sortear para começar.'; els.rouletteOrder.classList.add('hidden'); }
-    return;
-  }
-
-  if (state.phase === 'theme') {
+  if (state.phase === 'theme' || state.phase === 'playing' || state.phase === 'roundEnd') {
     showOnly('game');
     els.roundStatus.textContent=`Rodada ${state.round} de ${TOTAL_ROUNDS}`;
     updateThemeUI();
     updateTurnUI();
-    resizeCanvas();
-    return;
-  }
-
-  if (state.phase === 'playing') {
-    showOnly('game');
-    els.roundStatus.textContent=`Rodada ${state.round} de ${TOTAL_ROUNDS}`;
-    updateThemeUI();
-    updateTurnUI();
+    if (state.phase==='roundEnd') showRoundEndState(); else hideSuccess();
     resizeCanvas();
     requestAnimationFrame(resizeCanvas);
+    if (state.phase==='roundEnd') scheduleRoundEnd();
     return;
   }
 
@@ -464,6 +426,7 @@ function renderState() {
     showOnly('finished');
     els.roundStatus.textContent='Fim';
     renderFinalScores();
+    hideSuccess();
   }
 }
 
@@ -476,11 +439,14 @@ function applyState(nextState,{fromSnapshot=false}={}) {
     ...nextState,
     secretWord: preservedSecret,
     players:Array.isArray(nextState.players)?nextState.players.map(cleanPlayer):state.players,
+    joinOrder:Array.isArray(nextState.joinOrder)?nextState.joinOrder.slice():state.joinOrder,
     turnOrder:Array.isArray(nextState.turnOrder)?nextState.turnOrder.slice():state.turnOrder,
     strokes:fromSnapshot && Array.isArray(nextState.strokes)?nextState.strokes.slice(-5000):state.strokes,
     chatHistory:Array.isArray(nextState.chatHistory)?nextState.chatHistory.slice(-200):state.chatHistory
   };
   if (state.phase !== 'playing' || state.currentDrawerId !== playerId) {
+    // O host precisa manter a palavra em memória para validar os palpites,
+    // mas os demais leitores nunca devem receber essa palavra.
     if (!isHost()) state.secretWord = null;
   }
   state.hostId = authoritativeHostId();
@@ -500,7 +466,7 @@ function updateThemeUI() {
   const mine = state.phase === 'theme' && state.currentDrawerId === playerId;
   els.themePicker.classList.toggle('hidden', !mine);
   els.themeWait.classList.toggle('hidden', !(state.phase === 'theme' && !mine));
-  if (mine) renderThemeButtons();
+  if (mine) { renderThemeButtons(); els.themeButtons.querySelectorAll('.theme-choice').forEach(b=>b.disabled=themeHandling); }
   if (state.phase !== 'theme') els.themePicker.classList.add('hidden');
 }
 
@@ -659,42 +625,25 @@ async function hostStartGame(){
   if(startHandling || !isHost() || state.phase!=='lobby' || state.started)return;
   startHandling=true;
   try {
-    const roster=sortedPlayers(authoritativeRoster());
+    const roster=orderedPlayers(authoritativeRoster(), state.joinOrder);
     if(!roster.length)return;
-    state={...state,matchId:crypto.randomUUID(),started:true,phase:'roulette',round:1,theme:null,turnPosition:-1,turnOrder:[],currentDrawerId:null,turnKey:null,secretWord:null,strokes:[],rouletteSpun:false,rouletteWinnerId:null,rouletteRevealUntil:0,players:roster.map(cleanPlayer)};
-    wheelRotation=0;els.rouletteWheel.classList.remove('is-spinning');els.rouletteWheel.style.transform='rotate(0deg)';
+    themeHandling=false;
+    state={...state,matchId:crypto.randomUUID(),started:true,phase:'theme',round:1,theme:null,joinOrder:roster.map(p=>p.id),turnOrder:roster.map(p=>p.id),turnPosition:0,currentDrawerId:roster[0].id,turnKey:`match:r1:t0`,secretWord:null,strokes:[],roundEndUntil:0,lastWinnerId:null,lastWinnerName:null,lastWinnerWord:null,players:roster.map(cleanPlayer)};
+    state.turnKey=`${state.matchId}:r1:t0`;
+    handledGuessKey=null;
+    pendingSegments=[];
+    seenStrokeIds.clear();
     clearCanvas();hideSuccess();localSave();renderState();
+    await broadcast('theme-phase',{matchId:state.matchId,drawerId:state.currentDrawerId,round:state.round,turnPosition:state.turnPosition,turnKey:state.turnKey});
     await publishState(true);
   } finally {
     startHandling=false;
   }
 }
 
-async function hostSpinRoulette(){
-  if(rouletteHandling || !isHost() || state.phase!=='roulette' || state.rouletteSpun)return;
-  rouletteHandling=true;
-  try {
-    const alphabetical=sortedPlayers(state.players);
-    if(!alphabetical.length)return;
-    const firstIndex=Math.floor(Math.random()*alphabetical.length);
-    state.rouletteSpun=true;
-    state.rouletteWinnerId=alphabetical[firstIndex].id;
-    state.turnOrder=[...alphabetical.slice(firstIndex),...alphabetical.slice(0,firstIndex)].map(p=>p.id);
-    state.turnPosition=0;
-    state.currentDrawerId=state.turnOrder[0]||null;
-    state.turnKey=`${state.matchId}:r${state.round}:t${state.turnPosition}`;
-    state.rouletteRevealUntil=Date.now()+ROULETTE_SPIN_MS+ROULETTE_REVEAL_MS;
-    localSave();renderState();
-    await broadcast('roulette-spin',{matchId:state.matchId,firstIndex,winnerId:state.rouletteWinnerId,turnOrder:state.turnOrder,revealUntil:state.rouletteRevealUntil});
-    await publishState(false);
-    scheduleRouletteEnd();
-  } finally {
-    rouletteHandling=false;
-  }
-}
-
 async function hostBeginTheme() {
   if(!isHost() || !state.started || !state.turnOrder.length) return;
+  themeHandling=false;
   state.phase='theme';
   state.theme=null;
   state.currentDrawerId=state.turnOrder[state.turnPosition]||null;
@@ -716,40 +665,45 @@ function chooseThemeWord(theme) {
   return candidates[Math.floor(Math.random()*candidates.length)]||list[0];
 }
 
-async function hostChooseTheme(theme,requesterId) {
-  if(!isHost()||state.phase!=='theme'||requesterId!==state.currentDrawerId||!THEME_WORDS[theme]) return;
+async function hostChooseTheme(theme,requesterId,requestTurnKey=state.turnKey) {
+  if(!isHost()||state.phase!=='theme'||requesterId!==state.currentDrawerId||requestTurnKey!==state.turnKey||!THEME_WORDS[theme]) return false;
+  themeHandling=false;
   state.theme=theme;
   state.secretWord=chooseThemeWord(theme);
   state.phase='playing';
+  state.roundEndUntil=0;state.lastWinnerId=null;state.lastWinnerName=null;state.lastWinnerWord=null;
   state.strokes=[];pendingSegments=[];seenStrokeIds.clear();handledGuessKey=null;
   clearCanvas();hideSuccess();localSave();renderState();
   await broadcast('turn-start',{matchId:state.matchId,drawerId:state.currentDrawerId,round:state.round,turnPosition:state.turnPosition,turnKey:state.turnKey,theme});
   await publishTurnSecret(state.currentDrawerId);
   await publishState(true);
+  return true;
 }
 
-async function hostStartTurn(){ await hostBeginTheme(); }
-
 async function hostAdvanceTurn(){
-  if(!isHost()||!state.started||state.phase!=='playing')return;
+  if(!isHost()||!state.started||!['theme','playing','roundEnd'].includes(state.phase))return;
+  const currentId=state.currentDrawerId;
   state.turnOrder=state.turnOrder.filter(id=>state.players.some(p=>p.id===id));
   if(!state.turnOrder.length){await finishGame();return;}
-  const next=state.turnPosition+1;
+  const currentIndex=state.turnOrder.indexOf(currentId);
+  let next=currentIndex>=0 ? currentIndex+1 : 0;
   if(next>=state.turnOrder.length){
     if(state.round>=TOTAL_ROUNDS){await finishGame();return;}
-    state.round+=1;state.turnPosition=0;
-  } else state.turnPosition=next;
-  await hostStartTurn();
+    state.round+=1;
+    next=0;
+  }
+  state.turnPosition=next;
+  await hostBeginTheme();
 }
 
 async function finishGame(){
-  state.phase='finished';state.currentDrawerId=null;state.turnKey=null;state.secretWord=null;state.started=true;localSave();renderState();await publishState(true);await broadcast('finished',{matchId:state.matchId,players:state.players});
+  state.phase='finished';state.currentDrawerId=null;state.turnKey=null;state.secretWord=null;state.roundEndUntil=0;state.started=true;localSave();renderState();await publishState(true);await broadcast('finished',{matchId:state.matchId,players:state.players});
 }
 
 async function hostResetGame(){
   if(!isHost())return;
-  const roster=sortedPlayers(presencePlayers().slice(0,MAX_PLAYERS));
-  state={room:ROOM_NAME,matchId:null,players:roster.map(p=>({...p,score:0})),phase:'lobby',round:0,theme:null,turnOrder:[],turnPosition:-1,currentDrawerId:null,turnKey:null,secretWord:null,strokes:[],chatHistory:[],hostId:null,started:false,rouletteSpun:false,rouletteWinnerId:null,rouletteRevealUntil:0};
+  const roster=orderedPlayers(presencePlayers().slice(0,MAX_PLAYERS), state.joinOrder);
+  state={room:ROOM_NAME,matchId:null,players:roster.map(p=>({...p,score:0})),phase:'lobby',round:0,theme:null,joinOrder:roster.map(p=>p.id),turnOrder:[],turnPosition:-1,currentDrawerId:null,turnKey:null,secretWord:null,strokes:[],chatHistory:[],hostId:null,started:false,roundEndUntil:0,lastWinnerId:null,lastWinnerName:null,lastWinnerWord:null};
   handledGuessKey=null;seenStrokeIds.clear();pendingSegments=[];clearCanvas();hideSuccess();localSave();renderState();await publishState(true);
 }
 
@@ -765,8 +719,17 @@ async function handleGuessResult(message){
   if(!answer || guess!==answer || handledGuessKey===key)return;
   handledGuessKey=key;
   state.players=state.players.map(p=>p.id===sender.id?{...p,score:p.score+10}:p);
-  await broadcast('round-end',{matchId:state.matchId,turnKey:state.turnKey,winnerId:sender.id,winnerName:sender.name,word:answer});
-  await hostAdvanceTurn();
+  state.phase='roundEnd';
+  state.roundEndUntil=Date.now()+ROUND_END_REVEAL_MS;
+  state.lastWinnerId=sender.id;
+  state.lastWinnerName=sender.name;
+  state.lastWinnerWord=answer;
+  state.secretWord=null;
+  localSave();
+  renderState();
+  await broadcast('round-end',{matchId:state.matchId,turnKey:state.turnKey,winnerId:sender.id,winnerName:sender.name,word:answer,roundEndUntil:state.roundEndUntil});
+  await publishState(true);
+  scheduleRoundEnd();
 }
 
 function requestStateFromHost(){ broadcast('state-request',{requesterId:playerId}); }
@@ -784,28 +747,18 @@ async function handleBroadcast(event,payload){
     case 'start-request':
       if(isHost()) await hostStartGame();
       break;
-    case 'roulette-spin-request':
-      if(isHost()) await hostSpinRoulette();
-      break;
     case 'theme-request':
-      if(isHost() && payload.drawerId===state.currentDrawerId) await hostChooseTheme(payload.theme,payload.drawerId);
-      break;
-    case 'roulette-spin':
-      if(payload.matchId && state.matchId && payload.matchId!==state.matchId)return;
-      state.phase='roulette';state.started=true;state.rouletteSpun=true;state.rouletteWinnerId=payload.winnerId;state.turnOrder=payload.turnOrder||[];state.turnPosition=0;state.currentDrawerId=state.turnOrder[0]||null;state.rouletteRevealUntil=Number(payload.revealUntil)||0;state.turnKey=`${state.matchId}:r${state.round}:t0`;
-      localSave();renderState();runRouletteSpin(Number(payload.firstIndex)||0);scheduleRouletteEnd();
+      if(isHost() && payload.drawerId===state.currentDrawerId && payload.turnKey===state.turnKey) {
+        await hostChooseTheme(payload.theme,payload.drawerId,payload.turnKey);
+      }
       break;
     case 'theme-phase':
       if(payload.matchId && state.matchId && payload.matchId!==state.matchId)return;
-      state.phase='theme';state.started=true;state.matchId=payload.matchId||state.matchId;state.currentDrawerId=payload.drawerId;state.round=Number(payload.round)||state.round;state.turnPosition=Number(payload.turnPosition);state.turnKey=payload.turnKey||`${state.matchId}:r${state.round}:t${state.turnPosition}`;state.theme=null;state.secretWord=null;state.strokes=[];seenStrokeIds.clear();pendingSegments=[];hideSuccess();localSave();renderState();clearCanvas();
+      themeHandling=false;state.phase='theme';state.started=true;state.matchId=payload.matchId||state.matchId;state.currentDrawerId=payload.drawerId;state.round=Number(payload.round)||state.round;state.turnPosition=Number(payload.turnPosition);state.turnKey=payload.turnKey||`${state.matchId}:r${state.round}:t${state.turnPosition}`;state.theme=null;state.secretWord=null;state.strokes=[];state.roundEndUntil=0;state.lastWinnerId=null;state.lastWinnerName=null;state.lastWinnerWord=null;seenStrokeIds.clear();pendingSegments=[];hideSuccess();localSave();renderState();clearCanvas();
       break;
     case 'turn-start':
       if(payload.matchId && state.matchId && payload.matchId!==state.matchId)return;
-      hideSuccess();state.phase='playing';state.started=true;state.matchId=payload.matchId||state.matchId;state.currentDrawerId=payload.drawerId;state.round=Number(payload.round)||state.round;state.turnPosition=Number(payload.turnPosition);state.turnKey=payload.turnKey||`${state.matchId}:r${state.round}:t${state.turnPosition}`;state.theme=payload.theme||null;state.strokes=[];seenStrokeIds.clear();pendingSegments=[];localSave();renderState();clearCanvas();
-      break;
-    case 'turn':
-      if(payload.matchId && state.matchId && payload.matchId!==state.matchId)return;
-      hideSuccess();state.phase='playing';state.started=true;state.matchId=payload.matchId||state.matchId;state.currentDrawerId=payload.drawerId;state.round=Number(payload.round)||state.round;state.turnPosition=Number(payload.turnPosition);state.turnKey=payload.turnKey||`${state.matchId}:r${state.round}:t${state.turnPosition}`;state.rouletteSpun=true;state.strokes=[];seenStrokeIds.clear();pendingSegments=[];state.secretWord=(playerId===payload.drawerId||isHost())?wordFromToken(payload.wordToken):null;localSave();renderState();clearCanvas();
+      themeHandling=false;hideSuccess();state.phase='playing';state.started=true;state.matchId=payload.matchId||state.matchId;state.currentDrawerId=payload.drawerId;state.round=Number(payload.round)||state.round;state.turnPosition=Number(payload.turnPosition);state.turnKey=payload.turnKey||`${state.matchId}:r${state.round}:t${state.turnPosition}`;state.theme=payload.theme||null;state.strokes=[];state.roundEndUntil=0;state.lastWinnerId=null;state.lastWinnerName=null;state.lastWinnerWord=null;seenStrokeIds.clear();pendingSegments=[];localSave();renderState();clearCanvas();
       break;
     case 'turn-secret':
       if(payload.matchId!==state.matchId || payload.recipientId!==playerId || payload.turnKey!==state.turnKey)return;
@@ -836,11 +789,19 @@ async function handleBroadcast(event,payload){
       break;
     case 'round-end':
       if(payload.matchId!==state.matchId || payload.turnKey!==state.turnKey)return;
-      showSuccess(payload.winnerName,payload.word);
-      addChatMessage({player:payload.winnerName,text:`acertou "${payload.word}"`,color:state.players.find(p=>p.id===payload.winnerId)?.color||'#7fe8aa',correct:true});
+      state.phase='roundEnd';
+      state.roundEndUntil=Number(payload.roundEndUntil)||Date.now()+ROUND_END_REVEAL_MS;
+      state.lastWinnerId=payload.winnerId||null;
+      state.lastWinnerName=payload.winnerName||'Leitor';
+      state.lastWinnerWord=payload.word||'';
+      state.secretWord=null;
+      showSuccess(state.lastWinnerName,state.lastWinnerWord);
+      addChatMessage({player:state.lastWinnerName,text:`acertou "${state.lastWinnerWord}"`,color:state.players.find(p=>p.id===state.lastWinnerId)?.color||'#7fe8aa',correct:true});
+      localSave();
+      renderState();
       break;
     case 'finished':
-      hideSuccess();state.phase='finished';state.started=true;if(Array.isArray(payload.players))state.players=payload.players.map(cleanPlayer);state.currentDrawerId=null;state.turnKey=null;state.secretWord=null;localSave();renderState();
+      hideSuccess();state.phase='finished';state.started=true;if(Array.isArray(payload.players))state.players=payload.players.map(cleanPlayer);state.currentDrawerId=null;state.turnKey=null;state.secretWord=null;state.roundEndUntil=0;localSave();renderState();
       break;
     case 'reset-request':
       if(isHost()) await hostResetGame();
@@ -859,13 +820,11 @@ async function connectSupabase(){
       if(state.phase==='lobby' || !state.started){mergePresenceIntoLobby();if(isHost())await publishState(true);}
       renderPlayerCount();renderScores();
     })
-    .on('presence',{event:'join'},async()=>{if(state.phase==='lobby'||!state.started){mergePresenceIntoLobby();if(isHost())await publishState(true);}})
+    .on('presence',{event:'join'},async({key,newPresences})=>{if(state.phase==='lobby'||!state.started){mergePresenceIntoLobby();if(isHost())await publishState(true);}})
     .on('presence',{event:'leave'},async({key,leftPresences})=>{const ids=(leftPresences||[]).map(x=>x?.id).filter(Boolean).map(String);if(ids.length)ids.forEach(removeLeftPlayer);else if(key)removeLeftPlayer(String(key));})
     .on('broadcast',{event:'state'},({payload})=>handleBroadcast('state',payload))
     .on('broadcast',{event:'snapshot'},({payload})=>handleBroadcast('snapshot',payload))
     .on('broadcast',{event:'start-request'},({payload})=>handleBroadcast('start-request',payload))
-    .on('broadcast',{event:'roulette-spin-request'},({payload})=>handleBroadcast('roulette-spin-request',payload))
-    .on('broadcast',{event:'roulette-spin'},({payload})=>handleBroadcast('roulette-spin',payload))
     .on('broadcast',{event:'theme-phase'},({payload})=>handleBroadcast('theme-phase',payload))
     .on('broadcast',{event:'theme-request'},({payload})=>handleBroadcast('theme-request',payload))
     .on('broadcast',{event:'turn-start'},({payload})=>handleBroadcast('turn-start',payload))
@@ -882,7 +841,15 @@ async function connectSupabase(){
     .on('broadcast',{event:'state-request'},({payload})=>handleBroadcast('state-request',payload))
     .subscribe(async(status,error)=>{
       if(status==='SUBSCRIBED'){
-        await channel.track({id:playerId,name:playerName,color:clientColor,joinedAt});
+        await channel.track({id:playerId,name:playerName,color:clientColor,joinedAt,joinToken});
+        const sameIdPresences = (channel.presenceState()?.[playerId] || []).filter(p => p?.joinToken && p.joinToken !== joinToken);
+        if (sameIdPresences.some(p => Number(p.joinedAt) <= joinedAt)) {
+          setStatus('Este nome já está em uso nesta sala.');
+          els.startButton.disabled = true;
+          await channel.untrack();
+          window.location.href = 'index.html';
+          return;
+        }
         setStatus('Sala conectada.');
         requestStateFromHost();
         if(state.phase==='playing' && state.currentDrawerId===playerId && !state.secretWord) await broadcast('secret-request',{requesterId:playerId});
@@ -893,9 +860,8 @@ async function connectSupabase(){
 }
 
 els.chatToggle.addEventListener('click',()=>setChatCollapsed(!els.chatShell.classList.contains('is-collapsed')));
-els.startButton.addEventListener('click',()=>broadcast('start-request',{senderId:playerId}));
-els.sortearButton.addEventListener('click',()=>{ if(els.sortearButton.disabled)return; els.sortearButton.disabled=true; broadcast('roulette-spin-request',{senderId:playerId}); });
-els.themeButtons.addEventListener('click',e=>{ const button=e.target.closest('[data-theme]'); if(!button || state.phase!=='theme' || state.currentDrawerId!==playerId)return; els.themeButtons.querySelectorAll('.theme-choice').forEach(b=>b.disabled=true); const theme=button.dataset.theme; if(isHost()) hostChooseTheme(theme,playerId); else broadcast('theme-request',{drawerId:playerId,theme}); });
+els.startButton.addEventListener('click',()=>{ if(isHost()) broadcast('start-request',{senderId:playerId}); });
+els.themeButtons.addEventListener('click',async e=>{ const button=e.target.closest('[data-theme]'); if(!button || state.phase!=='theme' || state.currentDrawerId!==playerId || themeHandling)return; const theme=button.dataset.theme; if(!THEME_WORDS[theme])return; themeHandling=true; updateThemeUI(); if(isHost()) { const ok=await hostChooseTheme(theme,playerId,state.turnKey); if(!ok){themeHandling=false;updateThemeUI();} } else { await broadcast('theme-request',{drawerId:playerId,theme,turnKey:state.turnKey}); setStatus('Tema enviado. Aguardando a palavra...'); } });
 els.brushGroup.addEventListener('click',e=>{const b=e.target.closest('[data-tool]');if(b)setTool(b.dataset.tool)});
 els.sizeGroup.addEventListener('click',e=>{const b=e.target.closest('[data-size]');if(b)setSize(b.dataset.size)});
 els.palette.addEventListener('click',e=>{const b=e.target.closest('[data-color]');if(b)setColor(b.dataset.color)});
