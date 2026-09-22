@@ -1,169 +1,277 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Du Diable — Jogo de Desenho Online</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Du Diable — Dom Quixote</title>
 <style>
 *{box-sizing:border-box}
-:root{--ink:#3c3433;--muted:#817577;--paper:#f7efe3;--paper-2:#fffaf2;--rose:#c98d98;--rose-dark:#b46f7c;--gold:#b18a4d;--line:rgba(78,60,57,.14);--panel:#efe4d6;--canvas:#fffdfa}
-html,body{margin:0;min-height:100%;background:var(--paper);color:var(--ink)}
-body{font-family:"DM Sans",Arial,sans-serif;overflow-x:hidden;background-image:radial-gradient(rgba(75,59,51,.055) 1px,transparent 1px);background-size:6px 6px}
+:root{
+  --bg:#0b0d10;--paper:#11151a;--panel:#14191f;--panel-2:#191f26;--ink:#f4f7fb;--muted:#a4adb8;
+  --line:#2a323c;--rose:#ff4f7b;--rose-dark:#ff285e;--gold:#d8b15b;
+  --gold-dark:#f0cf78;--green:#39d98a;--blue:#41a7ff;--shadow:0 18px 48px rgba(0,0,0,.34);
+  --blackbox:#050607;--white:#ffffff
+}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:Inter,Arial,sans-serif}::selection{background:#ffd45a;color:#0a0b0d}
+body{overflow-x:hidden}
 button,input{font:inherit}
 button{cursor:pointer}
 .hidden{display:none!important}
-.game-shell{min-height:100vh;display:flex;flex-direction:column}
-.game-header{height:74px;padding:0 28px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;background:rgba(246,240,229,.94);border-bottom:1px solid var(--line);backdrop-filter:blur(10px);position:sticky;top:0;z-index:30}
-.game-brand{display:flex;flex-direction:column;gap:3px}.brand-kicker,.panel-kicker,.lobby-kicker,.roulette-kicker{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700}.game-brand strong{font:600 23px/1 "Playfair Display",Georgia,serif}.round-status{justify-self:center;font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--muted)}.player-counter{justify-self:end;font-family:"Libre Baskerville",Georgia,serif;font-size:14px}
-.game-main{flex:1;display:flex;min-height:calc(100vh - 74px)}
-.lobby-view,.roulette-view,.finished-view{width:100%;display:grid;place-items:center;padding:40px 24px}.lobby-card,.roulette-card,.finished-card{width:min(640px,100%);background:rgba(255,251,245,.93);border:1px solid var(--line);box-shadow:0 20px 50px rgba(66,49,43,.12);padding:48px;text-align:center}.lobby-ornament{color:var(--gold);font-size:24px;margin-bottom:18px}.lobby-card h1,.roulette-card h1,.finished-card h1{font:600 clamp(32px,5vw,54px)/1.04 "Playfair Display",Georgia,serif;margin:8px 0 18px}.lobby-copy{max-width:500px;margin:0 auto 30px;color:#6e6162;line-height:1.7}.lobby-players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;text-align:left;margin:22px 0 28px}.player-chip{padding:12px 14px;background:#f3e7db;border:1px solid rgba(82,63,57,.1);display:flex;align-items:center;gap:10px}.player-dot{width:11px;height:11px;border-radius:50%;flex:none}.start-button{border:1px solid #a96773;background:var(--rose);color:#fffdfb;padding:15px 34px;min-width:150px;text-transform:uppercase;letter-spacing:.18em;font-size:12px;font-weight:700;box-shadow:0 9px 18px rgba(174,111,124,.22);transition:.15s}.start-button:hover{transform:translateY(-1px);background:var(--rose-dark)}.start-hint{font-size:11px;color:#8a7a7a;margin:12px 0 0}
-.roulette-stage{display:grid;place-items:center;padding:22px 0}.roulette-wheel{width:min(390px,78vw);aspect-ratio:1;border-radius:50%;position:relative;background:conic-gradient(#e5bcc5 0deg,#eadcc2 45deg,#c8d5cb 90deg,#ead0bb 135deg,#c6cadb 180deg,#edd0cf 225deg,#d0dacd 270deg,#dbcbbd 315deg,#e5bcc5 360deg);border:10px solid #fdf8f0;box-shadow:0 16px 35px rgba(65,51,50,.18),inset 0 0 0 1px rgba(85,62,54,.14);transform:rotate(0deg)}.roulette-wheel.is-spinning{transition:transform 3.6s cubic-bezier(.18,.76,.25,1)}.roulette-pointer{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:0;border-bottom:25px solid var(--rose-dark);z-index:4}.roulette-center{position:absolute;inset:50%;width:82px;height:82px;margin:-41px;background:#fffaf1;border:4px solid #d6bf95;border-radius:50%;display:grid;place-items:center;font-family:"Playfair Display",Georgia,serif;font-size:24px;color:var(--gold);z-index:3}.roulette-labels{position:absolute;inset:0;z-index:2}.wheel-label{position:absolute;left:50%;top:50%;width:104px;text-align:center;font:600 11px/1.15 "DM Sans",sans-serif;transform-origin:0 0;color:#4e4241}.roulette-result{font:700 15px "Libre Baskerville",Georgia,serif;color:var(--rose-dark);min-height:22px}
-.game-view{width:100%;display:grid;grid-template-columns:250px minmax(0,1fr) 220px;gap:16px;padding:18px;min-height:calc(100vh - 74px)}.chat-panel,.score-panel,.canvas-area{min-height:0}.chat-panel,.score-panel{background:rgba(249,242,233,.92);border:1px solid var(--line);display:flex;flex-direction:column}.panel-heading{padding:18px 16px 15px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start}.panel-heading h2{margin:3px 0 0;font:600 24px/1 "Playfair Display",Georgia,serif}.live-dot{width:8px;height:8px;border-radius:50%;background:#7da58a;box-shadow:0 0 0 4px rgba(125,165,138,.12)}
-.chat-messages{flex:1;overflow:auto;padding:12px}.chat-message{padding:7px 6px;font-size:12px;line-height:1.45}.chat-name{font-weight:700}.chat-text{color:#5f5355}.chat-form{border-top:1px solid var(--line);padding:10px;display:flex;gap:7px}.chat-form input{flex:1;border:1px solid rgba(80,61,57,.15);background:#fffdf8;padding:10px 11px;outline:none;color:var(--ink)}.chat-form input:focus{border-color:#bf8e98}.chat-form button{width:38px;border:0;background:#e4c4ca;color:#7f5660}
-.canvas-area{display:flex;flex-direction:column;min-width:0}.canvas-topline{display:flex;justify-content:space-between;align-items:end;gap:16px;margin:4px 4px 10px}.canvas-topline h1{margin:3px 0 0;font:600 clamp(25px,3vw,38px)/1 "Playfair Display",Georgia,serif}.word-strip{min-height:42px;margin-bottom:10px;padding:10px 13px;background:#ece1d2;border:1px solid var(--line);color:#6d6061;font-size:12px}.word-strip.is-drawer{background:#e2eadf;color:#4f6254}.canvas-wrap{position:relative;flex:1;min-height:360px;background:var(--canvas);border:1px solid var(--line);box-shadow:0 10px 24px rgba(62,46,41,.08);overflow:hidden}.canvas-wrap canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}.canvas-overlay{position:absolute;inset:0;display:grid;place-items:center;background:rgba(252,248,241,.76);font-family:"Playfair Display",Georgia,serif;color:#6b5f60;font-size:18px}
-.drawing-tools{margin-top:11px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 8px;background:#ece2d6;border:1px solid var(--line)}.tool-group{display:flex;gap:5px}.tool-button,.size-button,.clear-button{border:1px solid rgba(78,59,55,.12);background:#f9f3ea;color:#66585a;padding:8px 10px;font-size:11px}.tool-button.active,.size-button.active{background:#ddc4c9;border-color:#bf929b;color:#5f4750}.size-button{width:34px;display:grid;place-items:center}.dot{display:block;border-radius:50%;background:#63585a}.dot.small{width:5px;height:5px}.dot.medium{width:10px;height:10px}.dot.large{width:15px;height:15px}.palette{display:flex;flex-wrap:wrap;gap:4px;max-width:390px}.color-swatch{width:19px;height:19px;border:1px solid rgba(0,0,0,.12);padding:0}.color-swatch.active{outline:2px solid #5c4b4b;outline-offset:1px}.clear-button{margin-left:auto;background:#f7eee0}
-.score-list{padding:12px;overflow:auto;display:flex;flex-direction:column;gap:8px}.score-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 9px;background:#f8f0e6;border:1px solid rgba(79,58,53,.1)}.score-main{display:flex;align-items:center;gap:8px;min-width:0}.score-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}.score-points{font-family:"Libre Baskerville",Georgia,serif;font-size:12px}.turn-dot{width:6px;height:6px;border-radius:50%;flex:none}.rules-card{margin-top:auto;border-top:1px solid var(--line);padding:14px 12px;display:flex;flex-direction:column;gap:6px;font-size:10px;color:#7f7272;text-transform:uppercase;letter-spacing:.1em}
-.success-overlay{position:fixed;inset:0;background:rgba(54,40,41,.36);display:grid;place-items:center;z-index:70;backdrop-filter:blur(4px)}.success-card{width:min(520px,calc(100% - 30px));background:#fffaf3;border:1px solid rgba(106,82,67,.16);box-shadow:0 28px 60px rgba(35,27,26,.24);text-align:center;padding:48px}.success-burst{color:var(--gold);font-size:28px}.success-card p{font-size:10px;letter-spacing:.24em;color:var(--rose-dark);font-weight:700;margin:10px 0}.success-card h2{font:600 42px/1 "Playfair Display",Georgia,serif;margin:0 0 8px}.success-word{font:700 18px "Libre Baskerville",Georgia,serif;color:#6a5a5c;margin:12px 0}.success-card span{font-size:11px;color:#8b7d7e}
-.book-overlay{position:fixed;inset:0;z-index:100;background:rgba(44,35,35,.62);padding:22px;display:flex}.book-overlay iframe{width:100%;height:100%;border:0;box-shadow:0 20px 70px rgba(27,20,18,.38);background:#d9d3c8}
-@media(max-width:1100px){.game-view{grid-template-columns:220px minmax(0,1fr)}.score-panel{grid-column:1/-1;min-height:170px}.score-list{flex-direction:row;flex-wrap:wrap}.score-row{min-width:180px}.rules-card{display:none}}
-@media(max-width:800px){.game-header{grid-template-columns:1fr auto;padding:0 16px}.round-status{display:none}.game-view{grid-template-columns:1fr;padding:10px}.chat-panel{order:2;min-height:230px}.canvas-area{order:1}.score-panel{order:3}.canvas-wrap{min-height:400px}.lobby-players{grid-template-columns:1fr}.drawing-tools{align-items:flex-start}.palette{max-width:100%}.book-overlay{padding:0}.book-overlay iframe{box-shadow:none}}
-@media(max-width:560px){.game-brand strong{font-size:20px}.player-counter{font-size:12px}.lobby-card,.roulette-card,.finished-card{padding:30px 20px}.game-header{height:64px}.game-main{min-height:calc(100vh - 64px)}.canvas-topline{align-items:flex-start}.canvas-topline h1{font-size:28px}.tool-button{padding:7px 8px}.clear-button{margin-left:0}}
 
+.game-shell{min-height:100vh;display:flex;flex-direction:column}
+.game-header{height:72px;padding:0 24px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;background:rgba(250,248,243,.96);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
+.game-brand{display:flex;flex-direction:column;gap:3px}.brand-kicker,.panel-kicker,.lobby-kicker,.roulette-kicker{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-dark);font-weight:800}.game-brand strong{font:600 23px/1 Georgia,serif}.round-status{justify-self:center;font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--muted)}.player-counter{justify-self:end;font-family:Georgia,serif;font-size:15px}
+
+.game-main{flex:1;min-height:calc(100vh - 72px)}
+.lobby-view,.roulette-view,.finished-view{width:100%;display:grid;place-items:center;padding:38px 20px}
+.lobby-card,.roulette-card,.finished-card{width:min(760px,100%);background:rgba(255,255,255,.96);border:1px solid var(--line);box-shadow:var(--shadow);padding:42px;text-align:center}
+.lobby-ornament{color:var(--gold);font-size:24px;margin-bottom:14px}.lobby-card h1,.roulette-card h1,.finished-card h1{font:600 clamp(32px,5vw,54px)/1.04 Georgia,serif;margin:8px 0 18px}.lobby-copy{max-width:570px;margin:0 auto 26px;color:#656a72;line-height:1.65}
+.lobby-players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;text-align:left;margin:22px 0 28px}.player-chip{padding:12px 14px;background:#f6f7f8;border:1px solid #e3e4e7;display:flex;align-items:center;gap:10px}.player-dot{width:11px;height:11px;border-radius:50%;flex:none}
+.start-button,.draw-button{border:1px solid #a63d51;background:var(--rose);color:white;padding:14px 30px;min-width:150px;text-transform:uppercase;letter-spacing:.16em;font-size:12px;font-weight:800;box-shadow:0 8px 16px rgba(190,69,90,.20);transition:.15s}
+.start-button:hover,.draw-button:hover{transform:translateY(-1px);background:var(--rose-dark)}.start-button:disabled,.draw-button:disabled{opacity:.45;cursor:not-allowed;transform:none}.start-hint{font-size:11px;color:#7b8088;margin:12px 0 0}
+
+.roulette-card{max-width:900px}.roulette-top{display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap}.roulette-stage{display:grid;place-items:center;padding:22px 0 12px}
+.roulette-wheel{width:min(430px,80vw);aspect-ratio:1;border-radius:50%;position:relative;background:conic-gradient(#e72a6c,#ffc52d,#0bcfdb,#238cf1,#7b4df0,#f437e3,#ef6c2d,#64df55,#e72a6c);border:12px solid #fff;box-shadow:0 18px 40px rgba(20,28,40,.18),inset 0 0 0 1px rgba(0,0,0,.12);transform:rotate(0deg)}
+.roulette-wheel.is-spinning{transition:transform 3.5s cubic-bezier(.18,.78,.18,1)}
+.roulette-pointer{position:absolute;top:-18px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:15px solid transparent;border-right:15px solid transparent;border-bottom:30px solid var(--rose-dark);z-index:6}
+.roulette-center{position:absolute;inset:50%;width:112px;height:112px;margin:-56px;background:#fff;border:4px solid var(--gold);border-radius:50%;display:grid;place-items:center;font:700 16px/1 Georgia,serif;color:var(--gold-dark);z-index:5;box-shadow:0 8px 18px rgba(0,0,0,.14)}
+.roulette-labels{position:absolute;inset:0;z-index:4}.wheel-label{position:absolute;left:50%;top:50%;width:118px;text-align:center;font:800 12px/1.15 Inter,Arial,sans-serif;transform-origin:0 0;color:#15171c;text-shadow:0 1px 0 rgba(255,255,255,.55)}
+.roulette-result{font:800 20px Georgia,serif;color:var(--rose-dark);min-height:28px;margin:8px 0 12px}
+.roulette-order{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:0 auto 18px;padding:12px 16px;border:1px solid #e6d19f;background:#fff9e8;color:#5d4a21;font-weight:800}
+.roulette-arrow{font-size:26px;color:var(--gold-dark);animation:arrowPulse 1s ease-in-out infinite}@keyframes arrowPulse{50%{transform:translateX(5px)}}
+.sort-hint{font-size:11px;color:#7a7e86;margin:0}
+
+.game-view{width:100%;display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;padding:16px;min-height:calc(100vh - 72px)}
+.canvas-area{display:flex;flex-direction:column;min-width:0;min-height:0}
+.canvas-topline{display:flex;justify-content:space-between;align-items:end;gap:16px;margin:3px 4px 9px}.canvas-topline h1{margin:3px 0 0;font:600 clamp(26px,3vw,38px)/1 Georgia,serif}
+.word-strip{min-height:46px;margin-bottom:10px;padding:11px 14px;background:#eceff1;border:1px solid var(--line);color:#42464e;font-size:13px;font-weight:700}.word-strip.is-drawer{background:#e5f7eb;border-color:#bfe4c9;color:#1c663b}
+.canvas-wrap{position:relative;flex:1;min-height:420px;background:#fff;border:1px solid #cfd2d6;box-shadow:var(--shadow);overflow:hidden}.canvas-wrap canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}.canvas-overlay{position:absolute;inset:0;display:grid;place-items:center;background:rgba(245,246,247,.82);font:600 18px Georgia,serif;color:#626770}
+
+.right-rail{min-height:0;display:grid;grid-template-rows:minmax(185px,30%) minmax(0,1fr);gap:12px}
+.panel{background:rgba(255,255,255,.98);border:1px solid var(--line);min-height:0;display:flex;flex-direction:column}.panel-heading{padding:16px 15px 13px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start}.panel-heading h2{margin:3px 0 0;font:600 24px/1 Georgia,serif}.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px rgba(53,191,104,.12)}
+.score-list{padding:10px;overflow:auto;display:flex;flex-direction:column;gap:7px}.score-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;background:#f7f8f9;border:1px solid #e2e4e7}.score-main{display:flex;align-items:center;gap:8px;min-width:0}.score-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}.score-points{font:800 13px Georgia,serif}.turn-dot{width:7px;height:7px;border-radius:50%;flex:none}.turn-mark{font-size:9px;color:var(--gold-dark);text-transform:uppercase;letter-spacing:.08em;margin-left:auto}.rules-card{margin-top:auto;border-top:1px solid var(--line);padding:11px;display:flex;justify-content:space-between;gap:8px;font-size:10px;color:#6f747c;text-transform:uppercase;letter-spacing:.1em}
+
+.chat-panel .chat-messages{flex:1;min-height:120px;overflow:auto;padding:10px}.chat-message{padding:6px 5px;font-size:12px;line-height:1.45;border-radius:4px}.chat-message.correct{background:#e9faef;border:1px solid #caecd5}.chat-name{font-weight:800}.chat-text{color:#555b63}
+.chat-form{border-top:1px solid var(--line);padding:9px;display:flex;gap:7px}.chat-form input{flex:1;border:1px solid #d4d7db;background:#fbfbfb;padding:10px 11px;outline:none;color:var(--ink)}.chat-form input:focus{border-color:#9dabb9}.chat-form button{width:40px;border:0;background:#2b2d32;color:#fff}
+
+.drawing-tools{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px;background:#edf0f2;border:1px solid #d7dade}.tool-group{display:flex;gap:5px}.tool-button,.size-button,.clear-button{border:1px solid #d0d3d7;background:#fff;color:#3e434a;padding:8px 10px;font-size:11px}.tool-button.active,.size-button.active{background:#292b30;border-color:#292b30;color:#fff}.size-button{width:34px;display:grid;place-items:center}.dot{display:block;border-radius:50%;background:currentColor}.dot.small{width:5px;height:5px}.dot.medium{width:10px;height:10px}.dot.large{width:16px;height:16px}
+.palette{display:grid;grid-template-columns:repeat(12,20px);gap:4px;margin-left:2px}.color-swatch{width:20px;height:20px;border:1px solid rgba(0,0,0,.18);padding:0;border-radius:3px}.color-swatch.active{outline:2px solid #111;outline-offset:1px}.clear-button{margin-left:auto;background:#fff4f4;border-color:#e2b3bb;color:#8e3448}
+
+.status-banner{margin-top:8px;padding:9px 12px;border:1px solid #e1e2e4;background:#fafafa;color:#5e636b;font-size:11px;min-height:34px}.status-banner.success{background:#ebfaef;border-color:#bfe4c9;color:#1f6c3e}.status-banner.info{background:#eef5ff;border-color:#c8dbf2;color:#2c5987}.status-banner.warn{background:#fff9e6;border-color:#ead79f;color:#6c5315}
+
+.success-overlay{position:fixed;inset:0;background:rgba(27,29,34,.36);display:grid;place-items:center;z-index:70;backdrop-filter:blur(3px)}.success-card{width:min(520px,calc(100% - 30px));background:#fff;border:1px solid #d4d6da;box-shadow:0 28px 60px rgba(35,27,26,.24);text-align:center;padding:42px}.success-burst{color:var(--gold);font-size:28px}.success-card p{font-size:10px;letter-spacing:.24em;color:var(--rose-dark);font-weight:800;margin:10px 0}.success-card h2{font:600 42px/1 Georgia,serif;margin:0 0 8px}.success-word{font:800 18px Georgia,serif;color:#555b62;margin:12px 0}.success-card span{font-size:11px;color:#767c84}
+
+.book-overlay{position:fixed;inset:0;z-index:100;background:rgba(30,31,35,.72);padding:20px;display:flex}.book-overlay iframe{width:100%;height:100%;border:0;box-shadow:0 20px 70px rgba(15,16,18,.40);background:#d9d3c8}
+
+.final-score{display:flex;flex-direction:column;gap:8px;text-align:left;margin:20px 0}
+
+/* TEMA ESCURO PADRÃO DOS JOGOS */
+.game-header{background:rgba(8,10,13,.97);border-bottom:1px solid #242a31;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+.game-brand{color:#fff}
+.game-brand .brand-kicker{color:#7f8995}
+.paint-brand{height:54px;min-width:220px;padding:0 15px 0 12px;background:var(--blackbox);display:flex;flex-direction:row;align-items:center;gap:10px;border:1px solid #232a31;box-shadow:0 9px 22px rgba(0,0,0,.28)}
+.paint-brand strong{font:900 34px/.95 Inter,Arial,sans-serif;letter-spacing:.08em;color:#fff}
+.paint-icon{width:35px;height:35px;display:grid;place-items:center;color:#ffd45a;flex:none}
+.paint-icon svg{width:100%;height:100%}
+.round-status{color:#909aa7}
+.player-counter{color:#f3f5f7}
+.lobby-view,.roulette-view,.finished-view{background:var(--bg)}
+.lobby-card,.roulette-card,.finished-card{background:linear-gradient(180deg,#151a20,#11151a);border-color:#2b333d;box-shadow:var(--shadow)}
+.lobby-card h1,.roulette-card h1,.finished-card h1{color:#f5f7fa}
+.lobby-copy{color:#a3acb6}
+.lobby-players .player-chip{background:#101419;border-color:#2b333d;color:#e9edf2}
+.lobby-players .player-chip span:last-child{color:#f0cf78!important}
+.start-hint,.sort-hint{color:#8c97a3}
+.roulette-pointer{border-bottom-color:#ff4f7b}
+.roulette-center{background:#0f1318;border-color:#d8b15b;color:#f0cf78}
+.roulette-result{color:#ff6b8e}
+.roulette-order{background:#171b14;border-color:#65582d;color:#f2d37d}
+.game-view{background:var(--bg)}
+.canvas-topline h1{color:#f5f7fa}
+.word-strip{background:#171d23;border-color:#2b333d;color:#b9c3ce}
+.word-strip.is-drawer{background:#13281f;border-color:#276847;color:#78e2a7}
+.canvas-wrap{background:#fff;border-color:#39434e;box-shadow:0 18px 42px rgba(0,0,0,.30)}
+.canvas-overlay{background:rgba(10,13,16,.74);color:#eef3f8}
+.right-rail{position:relative}
+.panel{background:#12171c;border-color:#2b333d}
+.panel-heading{border-color:#2b333d}
+.panel-heading h2{color:#f0f3f6}
+.panel-kicker{color:#d7b85f}
+.score-row{background:#171d23;border-color:#2b333d}
+.score-name,.score-points{color:#eef2f6}
+.turn-mark{color:#f0cf78}
+.rules-card{border-color:#2b333d;color:#8d98a4}
+.chat-messages{scrollbar-color:#495565 #11151a}
+.chat-message{color:#dfe5ea}.chat-text{color:#bec6cf}
+.chat-message.correct{background:#10251a;border-color:#255d3d;color:#d9ffe8}
+.chat-form{border-color:#2b333d}
+.chat-form input{background:#0d1115;border-color:#303944;color:#f0f4f8}.chat-form input::placeholder{color:#6f7985}.chat-form input:focus{border-color:#718091}
+.chat-form button{background:#f0cf78;color:#11161b}
+.chat-heading-actions{display:flex;align-items:center;gap:9px}
+.chat-toggle{width:30px;height:30px;border:1px solid #394451;background:#0b0e12;color:#f0cf78;border-radius:4px;font-size:21px;line-height:1;transition:.18s transform,.18s background}
+.chat-toggle:hover{background:#1c232b}
+.chat-panel{position:relative;z-index:5;transition:transform .22s ease,box-shadow .22s ease}
+.chat-panel.is-collapsed{transform:translateX(calc(100% - 50px));box-shadow:none}
+.chat-panel.is-collapsed .chat-heading h2,.chat-panel.is-collapsed .chat-heading .panel-kicker,.chat-panel.is-collapsed .chat-heading .live-dot{opacity:0;pointer-events:none}
+.chat-panel.is-collapsed .chat-messages,.chat-panel.is-collapsed .chat-form{visibility:hidden}
+.chat-panel.is-collapsed .chat-toggle{transform:rotate(180deg)}
+.drawing-tools{background:#0f1419;border-color:#2b333d}
+.tool-button,.size-button,.clear-button{background:#151b21;border-color:#38424d;color:#edf1f6}.tool-button.active,.size-button.active{background:#f0cf78;border-color:#f0cf78;color:#0b0e12}
+.clear-button{margin-left:auto;background:#26161a;border-color:#743240;color:#ffb5c2}
+.color-swatch{border-color:#52606e}.color-swatch.active{outline-color:#fff;box-shadow:0 0 0 1px #000}
+.status-banner{background:#10161b;border-color:#2b333d;color:#aeb8c2}.status-banner.success{background:#10251a;border-color:#255d3d;color:#82e3ad}.status-banner.info{background:#101f2d;border-color:#2d5476;color:#91c9fa}.status-banner.warn{background:#2b2411;border-color:#665224;color:#eed47f}
+.success-overlay{background:rgba(4,6,8,.76)}
+.success-card{background:#13181e;border-color:#303944;color:#f2f4f7}.success-card p{color:#ff6a8d}.success-card span{color:#aab3bd}
+.final-score .score-row{background:#171d23}
+.book-overlay{background:rgba(2,4,7,.80)}
+
+@media(max-width:850px){.paint-brand{min-width:174px;padding-right:12px}.paint-brand strong{font-size:28px}.paint-icon{width:30px;height:30px}}
+@media(max-width:560px){.paint-brand{min-width:145px;height:48px}.paint-brand strong{font-size:23px}.paint-icon{width:26px;height:26px}.chat-toggle{width:28px;height:28px}}
+
+@media(max-width:1050px){.game-view{grid-template-columns:minmax(0,1fr) 285px}.palette{grid-template-columns:repeat(10,20px)}}
+@media(max-width:850px){.game-header{grid-template-columns:1fr auto;padding:0 15px}.round-status{display:none}.game-view{grid-template-columns:1fr;padding:10px}.right-rail{grid-template-rows:minmax(190px,auto) minmax(280px,45vh)}.canvas-wrap{min-height:420px}.score-list{max-height:220px}.palette{grid-template-columns:repeat(12,20px)}}
+@media(max-width:560px){.game-brand strong{font-size:20px}.player-counter{font-size:12px}.lobby-card,.roulette-card,.finished-card{padding:30px 18px}.game-header{height:64px}.game-main{min-height:calc(100vh - 64px)}.lobby-players{grid-template-columns:1fr}.canvas-topline h1{font-size:28px}.drawing-tools{align-items:flex-start}.palette{grid-template-columns:repeat(9,20px)}.clear-button{margin-left:0}.book-overlay{padding:0}.book-overlay iframe{box-shadow:none}}
 </style>
 </head>
 <body>
-  <div class="game-shell" id="gameShell">
-    <header class="game-header">
-      <div class="game-brand">
-        <span class="brand-kicker">CLUBE DO LIVRO DU DIABLE</span>
-        <strong>Dom Quixote</strong>
+<div class="game-shell">
+  <header class="game-header">
+    <div class="game-brand paint-brand" aria-label="Paint — jogo de desenho do Clube do Livro Du Diable">
+      <span class="paint-icon" aria-hidden="true">
+        <svg viewBox="0 0 64 64" role="img">
+          <path d="M12 46 43 15l9 9-31 31-12 2 3-11Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+          <path d="M39 19 45 13c3-3 7-3 10 0s3 7 0 10l-6 6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+          <path d="M15 46 9 40" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+          <path d="M47 9c3-3 8-3 11 0" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <strong>PAINT</strong>
+    </div>
+    <div class="round-status" id="roundStatus">Lobby</div>
+    <div class="player-counter" id="playerCounter">0 de 10</div>
+  </header>
+
+  <main class="game-main">
+    <section class="lobby-view" id="lobbyView">
+      <div class="lobby-card">
+        <div class="lobby-ornament">✦</div>
+        <p class="lobby-kicker">O SALÃO DE DESENHO</p>
+        <h1>Escolham seus lugares.</h1>
+        <p class="lobby-copy">Quando qualquer jogador pressionar <b>Start</b>, a partida começa com quem estiver no lobby.</p>
+        <div class="lobby-players" id="lobbyPlayers"></div>
+        <button class="start-button" id="startButton" type="button">Start</button>
+        <p class="start-hint" id="startHint">Conectando à sala...</p>
       </div>
-      <div class="round-status" id="roundStatus">Lobby</div>
-      <div class="player-counter" id="playerCounter">0 de 10</div>
-    </header>
+    </section>
 
-    <main class="game-main">
-      <section class="lobby-view" id="lobbyView">
-        <div class="lobby-card">
-          <div class="lobby-ornament">✦</div>
-          <p class="lobby-kicker">O SALÃO DE DESENHO</p>
-          <h1>Escolham seus lugares.</h1>
-          <p class="lobby-copy">Quando qualquer jogador pressionar <b>Start</b>, a partida começa com quem estiver aqui.</p>
-
-          <div class="lobby-players" id="lobbyPlayers"></div>
-
-          <button class="start-button" id="startButton" type="button">Start</button>
-          <p class="start-hint" id="startHint">Até 10 jogadores podem participar.</p>
-        </div>
-      </section>
-
-      <section class="roulette-view hidden" id="rouletteView">
-        <div class="roulette-card">
-          <p class="roulette-kicker">PRIMEIRO A DESENHAR</p>
-          <h1>A roda escolheu.</h1>
-          <div class="roulette-stage">
-            <div class="roulette-wheel" id="rouletteWheel">
-              <div class="roulette-pointer"></div>
-              <div class="roulette-labels" id="rouletteLabels"></div>
-              <div class="roulette-center">DD</div>
-            </div>
+    <section class="roulette-view hidden" id="rouletteView">
+      <div class="roulette-card">
+        <p class="roulette-kicker">SORTEIO DO PRIMEIRO DESENHISTA</p>
+        <h1>Quem começa?</h1>
+        <div class="roulette-stage">
+          <div class="roulette-wheel" id="rouletteWheel">
+            <div class="roulette-pointer"></div>
+            <div class="roulette-labels" id="rouletteLabels"></div>
+            <div class="roulette-center"><button class="draw-button" id="sortearButton" type="button">Sortear</button></div>
           </div>
-          <div class="roulette-result" id="rouletteResult">Sorteando...</div>
         </div>
+        <div class="roulette-result" id="rouletteResult">Clique em Sortear para começar.</div>
+        <div class="roulette-order hidden" id="rouletteOrder">
+          <span class="roulette-arrow">➜</span>
+          <span id="rouletteOrderText"></span>
+        </div>
+        <p class="sort-hint">Os nomes ficam em ordem alfabética. Depois do sorteio, a vez segue no sentido horário.</p>
+      </div>
+    </section>
+
+    <section class="game-view hidden" id="gameView">
+      <section class="canvas-area">
+        <div class="canvas-topline">
+          <div>
+            <span class="panel-kicker" id="turnLabel">AGUARDANDO</span>
+            <h1 id="turnMessage">Preparem-se.</h1>
+          </div>
+        </div>
+
+        <div class="word-strip" id="wordStrip">
+          <span id="wordLabel">A palavra será sorteada no início da sua vez.</span>
+        </div>
+
+        <div class="canvas-wrap" id="canvasWrap">
+          <canvas id="drawingCanvas" aria-label="Área de desenho"></canvas>
+          <div class="canvas-overlay hidden" id="canvasLockOverlay">Aguardando o próximo desenhista</div>
+        </div>
+
+        <div class="drawing-tools">
+          <div class="tool-group brush-group" id="brushGroup">
+            <button class="tool-button active" data-tool="pencil" type="button">Lápis</button>
+            <button class="tool-button" data-tool="marker" type="button">Marcador</button>
+            <button class="tool-button" data-tool="chalk" type="button">Giz</button>
+            <button class="tool-button" data-tool="eraser" type="button">Borracha</button>
+          </div>
+          <div class="tool-group size-group" id="sizeGroup">
+            <button class="size-button active" data-size="3" type="button" aria-label="Pincel pequeno"><span class="dot small"></span></button>
+            <button class="size-button" data-size="7" type="button" aria-label="Pincel médio"><span class="dot medium"></span></button>
+            <button class="size-button" data-size="14" type="button" aria-label="Pincel grande"><span class="dot large"></span></button>
+          </div>
+          <div class="palette" id="palette" aria-label="Paleta de cores fortes"></div>
+          <button class="clear-button" id="clearCanvasButton" type="button">Limpar</button>
+        </div>
+        <div class="status-banner" id="statusBanner">Sala online pronta.</div>
       </section>
 
-      <section class="game-view hidden" id="gameView">
-        <aside class="chat-panel">
+      <aside class="right-rail">
+        <section class="panel score-panel">
           <div class="panel-heading">
-            <div>
-              <span class="panel-kicker">SALA</span>
-              <h2>Conversa</h2>
+            <div><span class="panel-kicker">PLACAR</span><h2>Jogadores</h2></div>
+          </div>
+          <div class="score-list" id="scoreList"></div>
+          <div class="rules-card"><span>5 rodadas</span><span>Acertou: +10</span></div>
+        </section>
+
+        <section class="panel chat-panel" id="chatPanel">
+          <div class="panel-heading chat-heading">
+            <div><span class="panel-kicker">SALA</span><h2>Conversa</h2></div>
+            <div class="chat-heading-actions">
+              <span class="live-dot" title="Conectado"></span>
+              <button class="chat-toggle" id="chatToggle" type="button" aria-expanded="true" aria-controls="chatMessages chatForm" title="Recolher chat">›</button>
             </div>
-            <span class="live-dot"></span>
           </div>
           <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
           <form class="chat-form" id="chatForm" autocomplete="off">
             <input id="chatInput" maxlength="200" placeholder="Escreva uma tentativa..." aria-label="Mensagem do chat">
             <button type="submit" aria-label="Enviar">↗</button>
           </form>
-        </aside>
-
-        <section class="canvas-area">
-          <div class="canvas-topline">
-            <div>
-              <span class="panel-kicker" id="turnLabel">AGUARDANDO</span>
-              <h1 id="turnMessage">Preparem-se.</h1>
-            </div>
-            
-          </div>
-
-          <div class="word-strip" id="wordStrip">
-            <span id="wordLabel">Você verá a palavra quando for sua vez.</span>
-          </div>
-
-          <div class="canvas-wrap" id="canvasWrap">
-            <canvas id="drawingCanvas" aria-label="Área de desenho"></canvas>
-            <div class="canvas-overlay hidden" id="canvasLockOverlay">Aguardando o próximo desenhista</div>
-          </div>
-
-          <div class="drawing-tools">
-            <div class="tool-group brush-group" id="brushGroup">
-              <button class="tool-button active" data-tool="pencil" type="button">Lápis</button>
-              <button class="tool-button" data-tool="marker" type="button">Marcador</button>
-              <button class="tool-button" data-tool="chalk" type="button">Giz</button>
-              <button class="tool-button" data-tool="eraser" type="button">Borracha</button>
-            </div>
-            <div class="tool-group size-group" id="sizeGroup">
-              <button class="size-button active" data-size="3" type="button" aria-label="Pincel pequeno"><span class="dot small"></span></button>
-              <button class="size-button" data-size="7" type="button" aria-label="Pincel médio"><span class="dot medium"></span></button>
-              <button class="size-button" data-size="14" type="button" aria-label="Pincel grande"><span class="dot large"></span></button>
-            </div>
-            <div class="palette" id="palette" aria-label="Paleta de cores"></div>
-            <button class="clear-button" id="clearCanvasButton" type="button">Limpar</button>
-          </div>
         </section>
+      </aside>
+    </section>
 
-        <aside class="score-panel">
-          <div class="panel-heading">
-            <div>
-              <span class="panel-kicker">PLACAR</span>
-              <h2>Jogadores</h2>
-            </div>
-          </div>
-          <div class="score-list" id="scoreList"></div>
-          <div class="rules-card">
-            <span>5 rodadas</span>
-            <span>Acertou: +10</span>
-          </div>
-        </aside>
-      </section>
+    <section class="finished-view hidden" id="finishedView">
+      <div class="finished-card">
+        <p class="lobby-kicker">FIM DA PARTIDA</p>
+        <h1>As cinco rodadas terminaram.</h1>
+        <div class="final-score" id="finalScore"></div>
+        <button class="start-button" id="playAgainButton" type="button">Voltar ao lobby</button>
+      </div>
+    </section>
+  </main>
+</div>
 
-      <section class="finished-view hidden" id="finishedView">
-        <div class="finished-card">
-          <p class="lobby-kicker">FIM DA PARTIDA</p>
-          <h1>As cinco rodadas terminaram.</h1>
-          <div class="final-score" id="finalScore"></div>
-          <button class="start-button" id="playAgainButton" type="button">Voltar ao lobby</button>
-        </div>
-      </section>
-    </main>
+<div class="success-overlay hidden" id="successOverlay">
+  <div class="success-card">
+    <div class="success-burst">✦</div>
+    <p>ACERTOU</p>
+    <h2 id="successName"></h2>
+    <div class="success-word" id="successWord"></div>
+    <span>+10 pontos</span>
   </div>
+</div>
 
-  <div class="success-overlay hidden" id="successOverlay">
-    <div class="success-card">
-      <div class="success-burst">✦</div>
-      <p>ACERTOU</p>
-      <h2 id="successName"></h2>
-      <div class="success-word" id="successWord"></div>
-      <span>+10 pontos</span>
-    </div>
-  </div>
+<div class="book-overlay hidden" id="bookOverlay" aria-hidden="true">
+  <iframe id="bookFrame" title="Livro de Dom Quixote" src="reader.html?book=1&overlay=1"></iframe>
+</div>
 
-  <div class="book-overlay hidden" id="bookOverlay" aria-hidden="true">
-    <iframe id="bookFrame" title="Livro de Dom Quixote" src="reader.html?book=1&overlay=1"></iframe>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="game-dom-quixote.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="game-dom-quixote.js"></script>
 </body>
 </html>
