@@ -37,13 +37,16 @@ button,input{font:inherit}button{cursor:pointer}.hidden{display:none!important}
 
 /* Roulette */
 .roulette-card{max-width:940px}.roulette-stage{display:grid;place-items:center;padding:20px 0 8px}.roulette-wheel{width:min(470px,84vw);aspect-ratio:1;border-radius:50%;position:relative;background:radial-gradient(circle at center,#0d1318 0 28%,#11191f 29% 72%,#0a0f13 73% 100%);border:10px solid #2d3741;box-shadow:0 18px 50px rgba(0,0,0,.35),inset 0 0 0 2px #6a5b31;transform:rotate(0deg);overflow:visible}
-.roulette-wheel::before{content:"";position:absolute;inset:12%;border-radius:50%;border:1px dashed #53606c;opacity:.7}.roulette-wheel.is-spinning{transition:transform 4.2s cubic-bezier(.16,.80,.18,1)}
+.roulette-wheel::before{content:"";position:absolute;inset:12%;border-radius:50%;border:1px dashed #53606c;opacity:.7}.roulette-wheel.is-spinning{transition:transform 7.2s cubic-bezier(.10,.68,.18,1)}
 .roulette-pointer{position:absolute;top:-24px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:16px solid transparent;border-right:16px solid transparent;border-bottom:28px solid #ff6688;z-index:8;filter:drop-shadow(0 2px 3px rgba(0,0,0,.3))}
 .roulette-center{position:absolute;inset:50%;width:118px;height:118px;margin:-59px;border-radius:50%;display:grid;place-items:center;background:#050607;border:4px solid var(--accent);box-shadow:0 8px 24px rgba(0,0,0,.28);z-index:7}
 .roulette-center button{min-width:92px;padding:11px 10px}
 .roulette-labels{position:absolute;inset:0;z-index:5}.wheel-label{position:absolute;left:50%;top:50%;width:104px;min-height:30px;padding:7px 8px;border:1px solid #55616e;background:#1a2229;color:#f2f5f8;text-align:center;font-size:10px;line-height:1.05;font-weight:900;box-shadow:0 4px 10px rgba(0,0,0,.22);transform-origin:center;transition:transform .2s,background .2s,border-color .2s,box-shadow .2s, color .2s}.wheel-label.winner{background:#f2cf69;color:#111;border-color:#fff3bd;box-shadow:0 0 0 3px #ff6688,0 0 30px rgba(242,207,105,.55);animation:winnerPulse .65s ease-in-out infinite alternate}@keyframes winnerPulse{to{transform:scale(1.08)}}
 .roulette-result{min-height:25px;margin:12px 0 10px;font:900 20px/1 Georgia,serif;color:#fff}.roulette-result strong{color:var(--accent)}
 .roulette-order{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin:0 auto 15px;padding:11px 14px;border:1px solid #5b4b25;background:#17140b;color:#f3d67c;font-size:12px;font-weight:800}.roulette-order .arrow{font-size:20px;color:#ff6688}
+
+
+.theme-picker{margin:10px 0 9px;padding:10px;background:#11161b;border:1px solid #2b343e;display:flex;flex-wrap:wrap;gap:7px;align-items:center}.theme-picker > #themeButtons{display:flex;flex-wrap:wrap;gap:7px}.theme-picker-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8f9aa5;font-weight:900;margin-right:2px}.theme-choice{border:1px solid #394451;background:#161c22;color:#dfe5ea;padding:7px 10px;font-size:10px;font-weight:800}.theme-choice:hover{border-color:#f2cf69;color:#f2cf69}.theme-choice:disabled{opacity:.5;cursor:wait}.theme-wait{margin:10px 0 9px;padding:10px;background:#10151a;border:1px solid #2b343e;color:#87929e;font-size:11px}
 
 /* Paint */
 .game-view{width:100%;display:grid;grid-template-columns:minmax(0,1fr) 336px;gap:14px;padding:14px;min-height:calc(100vh - 70px)}
@@ -174,6 +177,8 @@ button,input{font:inherit}button{cursor:pointer}.hidden{display:none!important}
       <section class="canvas-area">
         <div class="canvas-topline"><span class="panel-kicker" id="turnLabel">AGUARDANDO</span><h1 id="turnMessage">Área de pintura.</h1></div>
         <div class="word-strip" id="wordStrip"><span id="wordLabel">A palavra será entregue somente a quem estiver pintando.</span></div>
+        <div class="theme-picker hidden" id="themePicker"><span class="theme-picker-label">Tema:</span><div id="themeButtons"></div></div>
+        <div class="theme-wait hidden" id="themeWait">Aguardando o desenhista escolher um tema.</div>
         <div class="canvas-wrap" id="canvasWrap"><canvas id="drawingCanvas" aria-label="Área de pintura"></canvas></div>
 
         <div class="drawing-tools" id="drawingTools">
