@@ -15,7 +15,10 @@ body{overflow-x:hidden}
 button,input{font:inherit}button{cursor:pointer}.hidden{display:none!important}
 
 .game-shell{min-height:100vh;display:flex;flex-direction:column}
-.game-header{height:70px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 14px;background:#050607;border-bottom:1px solid #222a32;position:sticky;top:0;z-index:30}
+.game-header{height:70px;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;padding:0 14px;background:#050607;border-bottom:1px solid #222a32;position:sticky;top:0;z-index:30}
+.header-left{display:flex;align-items:center;gap:8px;min-width:0}
+.club-back{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:34px;height:42px;padding:0 10px;border:1px solid #2d353e;background:#0b0e11;color:#f2f5f8;text-decoration:none;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;transition:.15s ease;white-space:nowrap;flex:none}
+.club-back:hover{background:#171d23;border-color:#55616d;color:#f2cf69}
 .paint-brand{height:54px;min-width:210px;display:flex;align-items:center;gap:11px;padding:0 14px;background:#000;border:1px solid #2d353e;color:#fff}
 .paint-brand strong{font:900 29px/1 Inter,Segoe UI,Arial,sans-serif;letter-spacing:.04em}
 .paint-icon{width:30px;height:30px;color:#f2cf69;display:block}.paint-icon svg{width:100%;height:100%;display:block}
@@ -58,24 +61,80 @@ button,input{font:inherit}button{cursor:pointer}.hidden{display:none!important}
 .right-rail{min-height:0;display:grid;grid-template-rows:minmax(190px,32%) minmax(250px,1fr);gap:12px}.panel{background:#11161b;border:1px solid var(--line);min-height:0;display:flex;flex-direction:column}.panel-heading{padding:13px 14px 11px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start}.panel-heading h2{margin:3px 0 0;font:700 22px/1 Georgia,serif;color:#edf1f5}
 .score-list{padding:9px;overflow:auto;display:flex;flex-direction:column;gap:6px}.score-row{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:8px 9px;background:#151b21;border:1px solid #29323b}.score-main{display:flex;align-items:center;gap:7px;min-width:0}.score-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:#e3e8ed}.score-points{font:800 13px Georgia,serif;color:#f4f6f8}.turn-dot{width:7px;height:7px;border-radius:50%;flex:none}.turn-mark{font-size:8px;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-left:auto}.rules-card{margin-top:auto;border-top:1px solid var(--line);padding:9px;display:flex;justify-content:space-between;gap:8px;font-size:9px;color:#7f8a96;text-transform:uppercase;letter-spacing:.1em}
 
-.chat-shell{position:relative;min-height:0;overflow:visible}.chat-panel{height:100%;position:relative;transition:transform .22s ease,opacity .22s ease;z-index:5}.chat-shell.is-collapsed .chat-panel{transform:translateX(calc(100% + 12px));opacity:0;pointer-events:none}.chat-dock-toggle{position:absolute;left:-31px;top:12px;width:30px;height:34px;border:1px solid #394451;background:#0b0f13;color:#f2cf69;border-radius:3px 0 0 3px;font-size:20px;line-height:1;z-index:8}.chat-dock-toggle:hover{background:#1a2128}
+.chat-shell{position:relative;min-height:0;overflow:visible}.chat-panel{height:100%;position:relative;transition:transform .22s ease,opacity .22s ease;z-index:5}.chat-shell.is-collapsed .chat-panel{transform:translateX(calc(100% + 12px));opacity:0;pointer-events:none}.chat-dock-toggle{position:absolute;left:-31px;top:12px;width:30px;height:34px;border:1px solid #394451;background:#0b0f13;color:#f2cf69;border-radius:3px 0 0 3px;font-size:20px;line-height:1;z-index:8}.chat-dock-toggle:hover{background:#1a2128}.chat-shell.is-collapsed .chat-dock-toggle{left:auto;right:0;border-radius:3px 0 0 3px}
 .chat-heading-actions{display:flex;align-items:center;gap:8px}.live-dot{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 4px rgba(67,220,138,.1)}
 .chat-messages{flex:1;min-height:110px;overflow:auto;padding:9px;scrollbar-color:#465363 #10151a}.chat-message{padding:6px 5px;font-size:11px;line-height:1.45;border-radius:3px;color:#dfe5ea}.chat-message.correct{background:#10261b;border:1px solid #255d3d;color:#dbffe7}.chat-name{font-weight:900}.chat-text{color:#bcc5ce}.chat-form{border-top:1px solid var(--line);padding:8px;display:flex;gap:6px}.chat-form input{flex:1;border:1px solid #303a45;background:#0c1115;padding:9px 10px;outline:none;color:#eef2f5;font-size:11px}.chat-form input:focus{border-color:#6f7f8f}.chat-form input::placeholder{color:#687582}.chat-form button{width:38px;border:1px solid #856e2a;background:#f2cf69;color:#11161a;font-weight:900}
 
-.success-overlay{position:fixed;left:50%;top:82px;transform:translateX(-50%);z-index:70;pointer-events:none}.success-card{min-width:280px;padding:12px 16px;background:#0e1712;border:1px solid #346648;box-shadow:0 12px 30px rgba(0,0,0,.34);text-align:center}.success-card p{margin:0 0 4px;font-size:9px;letter-spacing:.2em;color:#7fe8aa;font-weight:900}.success-card h2{margin:0;font:900 17px/1.15 Georgia,serif;color:#f5f7f9}.success-word{margin-top:4px;color:#f2cf69;font:800 12px Georgia,serif}.success-card span{display:block;margin-top:3px;color:#aab5bf;font-size:9px}
+.success-overlay{position:fixed;left:50%;top:82px;transform:translateX(-50%);z-index:70;pointer-events:none}.success-card{min-width:280px;padding:12px 16px;background:#0e1712;border:1px solid #346648;box-shadow:0 12px 30px rgba(0,0,0,.34);text-align:center}.success-card p{margin:0 0 4px;font-size:9px;letter-spacing:.2em;color:#7fe8aa;font-weight:900}.success-card h2{margin:0;font:900 17px/1.15 Georgia,serif;color:#f5f7f9}.success-word{margin-top:4px;color:#f2cf69;font:800 12px Georgia,serif}.success-card span{display:block;margin-top:3px;color:#aab5bf;font-size:9px}.success-card.success-animate{animation:successFade 1.2s ease-out both}@keyframes successFade{0%{opacity:0;transform:translateY(-8px) scale(.98)}12%{opacity:1;transform:translateY(0) scale(1)}70%{opacity:1}100%{opacity:0;transform:translateY(-5px) scale(.99)}}
 .book-overlay{position:fixed;inset:0;z-index:100;background:rgba(1,3,5,.78);padding:12px;display:flex}.book-overlay iframe{width:100%;height:100%;border:0;background:#d9d3c8;box-shadow:0 24px 70px rgba(0,0,0,.5)}
 
 @media(max-width:1050px){.game-view{grid-template-columns:minmax(0,1fr) 290px}.palette{grid-template-columns:repeat(10,18px)}}
-@media(max-width:820px){.game-header{grid-template-columns:1fr auto;padding:0 10px}.round-status{display:none}.game-view{grid-template-columns:1fr;padding:10px}.right-rail{grid-template-rows:210px minmax(260px,42vh)}.canvas-wrap{min-height:420px}.palette{grid-template-columns:repeat(12,18px)}}
-@media(max-width:560px){.paint-brand{min-width:145px;height:48px}.paint-brand strong{font-size:23px}.paint-icon{width:25px;height:25px}.player-counter{font-size:12px}.lobby-card,.roulette-card,.finished-card{padding:28px 16px}.lobby-players{grid-template-columns:1fr}.canvas-wrap{min-height:360px}.palette{grid-template-columns:repeat(9,18px)}.clear-button{margin-left:0}.book-overlay{padding:0}.book-overlay iframe{box-shadow:none}}
+@media(max-width:1050px){.game-view{grid-template-columns:minmax(0,1fr) 290px}.palette{grid-template-columns:repeat(10,18px)}}
+@media(max-width:820px){
+  .game-header{grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:8px 10px;height:auto;min-height:62px}
+  .header-left{min-width:0}
+  .round-status{display:none}
+  .game-view{grid-template-columns:1fr;padding:10px;gap:10px}
+  .right-rail{grid-template-rows:auto minmax(300px,42vh);gap:10px}
+  .score-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-height:150px;overflow:auto}
+  .canvas-area{min-height:0}
+  .canvas-wrap{height:clamp(250px,80vw,520px);min-height:0;flex:none}
+  .palette{grid-template-columns:repeat(12,18px)}
+  .drawing-tools{align-items:flex-start}
+}
+@media(max-width:560px){
+  .game-header{grid-template-columns:minmax(0,1fr) auto;padding:7px 8px;min-height:56px}
+  .chat-shell.is-collapsed{min-height:34px}
+  .chat-shell.is-collapsed .chat-panel{display:none}
+  .header-left{gap:6px}
+  .club-back{width:36px;min-width:36px;padding:0;font-size:0}
+  .club-back::before{content:'←';font-size:20px;line-height:1}.club-back span{display:inline}
+  .paint-brand{min-width:0;flex:1;height:42px;padding:0 10px;gap:8px}
+  .paint-brand strong{font-size:22px}
+  .paint-icon{width:23px;height:23px}
+  .player-counter{font-size:11px}
+  .lobby-card,.roulette-card,.finished-card{padding:24px 14px}
+  .lobby-players{grid-template-columns:1fr}
+  .canvas-topline h1{font-size:13px}
+  .word-strip{font-size:11px}
+  .canvas-wrap{height:clamp(250px,82vw,420px)}
+  .drawing-tools{gap:6px;padding:7px}
+  .tool-group{flex-wrap:wrap}
+  .palette{grid-template-columns:repeat(8,18px)}
+  .clear-button{margin-left:0}
+  .right-rail{grid-template-rows:auto minmax(300px,52vh)}
+  .score-list{grid-template-columns:repeat(2,minmax(0,1fr));max-height:132px}
+  .chat-form input{font-size:12px}
+  .chat-dock-toggle{right:0;left:auto}
+  .book-overlay{padding:0}
+  .book-overlay iframe{box-shadow:none}
+}
+@media(orientation:landscape) and (max-width:950px){
+  .game-header{grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:8px 10px;height:auto;min-height:62px}
+  .round-status{display:none}
+  .paint-brand{min-width:170px}
+  .game-view{grid-template-columns:minmax(0,1fr) 250px;align-items:start}
+  .right-rail{grid-template-rows:170px minmax(220px,1fr)}
+  .canvas-wrap{height:calc(100vh - 150px);max-height:520px;min-height:220px}
+  .score-list{max-height:112px}
+}
+@media(orientation:landscape) and (max-width:820px){
+  .game-view{grid-template-columns:minmax(0,1fr) 250px;align-items:start}
+  .right-rail{grid-template-rows:170px minmax(220px,1fr)}
+  .canvas-wrap{height:calc(100vh - 150px);max-height:520px}
+  .score-list{max-height:112px}
+}
 </style>
 </head>
 <body>
 <div class="game-shell">
   <header class="game-header">
-    <div class="paint-brand" aria-label="PAINT">
+    <div class="header-left">
+      <a class="club-back" href="./index.html" aria-label="Voltar ao Clube do Livro" title="Voltar ao Clube do Livro"><span>Clube do Livro</span></a>
+      <div class="paint-brand" aria-label="PAINT">
       <span class="paint-icon" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M12 46 43 15l9 9-31 31-12 2 3-11Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M39 19 45 13c3-3 7-3 10 0s3 7 0 10l-6 6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M15 46 9 40" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></span>
-      <strong>PAINT</strong>
+        <strong>PAINT</strong>
+      </div>
     </div>
     <div class="round-status" id="roundStatus">Lobby</div>
     <div class="player-counter" id="playerCounter">0 de 10</div>
